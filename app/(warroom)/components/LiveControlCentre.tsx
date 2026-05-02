@@ -218,7 +218,11 @@ export function LiveControlCentre({
                   void run("reset", async () => {
                     const r = await demoResetKv();
                     if (r.ok) {
-                      setHint(`reset · ${r.reset_at ?? "ok"}`);
+                      setHint(
+                        r.noop
+                          ? `reset · noop — ${r.reason ?? "skipped"}`
+                          : `reset · ${r.reset_at ?? "ok"}`
+                      );
                     } else {
                       setHint(`reset · ${r.status} ${r.message}`);
                     }

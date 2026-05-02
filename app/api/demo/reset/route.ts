@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { execSync } from "child_process";
+import { existsSync } from "fs";
 import { resolve } from "path";
 import { timingSafeEqual } from "crypto";
 
@@ -13,6 +14,16 @@ export async function POST(req: NextRequest) {
   const expected = process.env.DEMO_RESET_TOKEN;
   if (!token || !expected || !safeTokenCompare(token, expected)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const watermark = resolve(process.cwd(), ".demo-watermark");
+  if (process.env.VERCEL || !existsSync(watermark)) {
+    return NextResponse.json({
+      ok: true,
+      noop: true,
+      reason:
+        "KV reset script needs .demo-watermark + local demo repo — not available on this host (e.g. Vercel). Use dashboard KV tools or deploy-specific cleanup.",
+    });
   }
 
   try {

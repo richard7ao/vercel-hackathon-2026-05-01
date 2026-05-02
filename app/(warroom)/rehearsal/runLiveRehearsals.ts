@@ -192,7 +192,7 @@ export async function demoTriggerWatchdog(
 }
 
 export type DemoResetResult =
-  | { ok: true; reset_at?: string }
+  | { ok: true; reset_at?: string; noop?: boolean; reason?: string }
   | { ok: false; status: number; message: string };
 
 /** POST /api/demo/reset — runs scripts/reset-demo.sh (local / long-running env only). */
@@ -204,8 +204,17 @@ export async function demoResetKv(signal?: AbortSignal): Promise<DemoResetResult
     return { ok: false, status: res.status, message: text.slice(0, 240) };
   }
   try {
-    const j = JSON.parse(text) as { reset_at?: string };
-    return { ok: true, reset_at: j.reset_at };
+    const j = JSON.parse(text) as {
+      reset_at?: string;
+      noop?: boolean;
+      reason?: string;
+    };
+    return {
+      ok: true,
+      reset_at: j.reset_at,
+      noop: j.noop,
+      reason: j.reason,
+    };
   } catch {
     return { ok: true };
   }
@@ -337,10 +346,10 @@ export async function runLiveRehearsals(
 
       addTrace(i, {
         ts: clockTs(),
-        label: "wait GitHub webhook + watchdog (4s)",
+        label: "wait GitHub webhook + watchdog (8s)",
         status: "done",
       });
-      await new Promise((r) => setTimeout(r, 4000));
+      await new Promise((r) => setTimeout(r, 8000));
 
       patchRow(i, { status: "waiting_pause" });
       addTrace(i, { ts: clockTs(), label: "polling pause_state", status: "running" });

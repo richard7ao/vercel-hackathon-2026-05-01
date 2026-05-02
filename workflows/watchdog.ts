@@ -49,8 +49,18 @@ const DISPATCH_THRESHOLD = Math.max(
   Math.min(1, parseFloat(process.env.DISPATCH_THRESHOLD ?? "0.6"))
 );
 
-/** Git-backed board/trace rehearsal: canary patch is weak signal-only; floor score so hook + KV pause still run. */
-function isRehearsalCanaryIngest(ingest: { files: { patch?: string }[] }): boolean {
+const REHEARSAL_COMMIT_HINT = "bridge rehearsal";
+
+/** Git-backed board/trace rehearsal: floor score + force human gate (GitHub may omit `patch` on some commits). */
+function isRehearsalCanaryIngest(ingest: {
+  files: { patch?: string }[];
+  commit_message: string;
+}): boolean {
+  if (
+    ingest.commit_message.toLowerCase().includes(REHEARSAL_COMMIT_HINT)
+  ) {
+    return true;
+  }
   return ingest.files.some(
     (f) => typeof f.patch === "string" && f.patch.includes(BRIDGE_REHEARSAL_MARKER)
   );
@@ -92,7 +102,8 @@ async function synthesizeAndPage(
   sha: string,
   investigators: InvestigatorResult[],
   signals: Record<string, unknown>,
-  score: number
+  score: number,
+  rehearsalCanary: boolean
 ): Promise<AckPayload | null> {
   const findings = investigators
     .filter((i) => i.finding)
@@ -102,12 +113,29 @@ async function synthesizeAndPage(
       summary: i.finding!.summary,
     }));
 
-  const verdict = await synthesize({
+  let verdict = await synthesize({
     deploy_id: sha,
     findings,
     signals,
     score,
   });
+
+  // LLM sometimes returns "watch" despite high score; rehearsal would then skip
+  // the hook entirely and never write pause_state — board/trace rehearsal times out.
+  if (
+    rehearsalCanary &&
+    verdict.level !== "critical" &&
+    verdict.level !== "investigate"
+  ) {
+    verdict = {
+      ...verdict,
+      level: "investigate",
+      summary: `[rehearsal] ${verdict.summary}`,
+      suggested_action:
+        verdict.suggested_action ||
+        "Hold for review — Bridge git rehearsal (forced investigate for WDK hook).",
+    };
+  }
 
   if (verdict.level !== "critical" && verdict.level !== "investigate") {
     return null;
@@ -188,7 +216,8 @@ export async function watchdog(input: WatchdogInput): Promise<WatchdogResult> {
         sha,
         investigators,
         {},
-        _force_score
+        _force_score,
+        false
       );
       return {
         sha,
@@ -218,9 +247,8 @@ export async function watchdog(input: WatchdogInput): Promise<WatchdogResult> {
     signals,
   });
 
-  const effectiveScore = isRehearsalCanaryIngest(ingestResult)
-    ? Math.max(score, 0.95)
-    : score;
+  const rehearsalCanary = isRehearsalCanaryIngest(ingestResult);
+  const effectiveScore = rehearsalCanary ? Math.max(score, 0.95) : score;
 
   const { tldr } = await summarize({
     files: ingestResult.files,
@@ -242,7 +270,8 @@ export async function watchdog(input: WatchdogInput): Promise<WatchdogResult> {
       sha,
       investigators,
       signals as Record<string, unknown>,
-      effectiveScore
+      effectiveScore,
+      rehearsalCanary
     );
   }
 
