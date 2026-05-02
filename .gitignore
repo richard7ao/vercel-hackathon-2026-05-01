@@ -18,6 +18,10 @@ node_modules/
 # === Build / test artifacts ===
 build/
 coverage/
+test-results/
+playwright-report/
+blob-report/
+.playwright/
 
 # === Env / secrets ===
 .env

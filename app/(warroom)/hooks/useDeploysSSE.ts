@@ -1,6 +1,7 @@
 "use client";
 
 import { useReducer, useEffect, useCallback, useRef, useState } from "react";
+import { getDemoToken } from "../rehearsal/runLiveRehearsals";
 import {
   type SSEEvent,
   type StatusEvent,
@@ -150,9 +151,55 @@ export function useDeploysSSE() {
 
   const demo = useDemo(mode);
 
+  const resumeVerdictAction = useCallback(
+    async (action_type: "ack" | "hold" | "page") => {
+      const v = liveState.verdict;
+      if (!v?.deploy_id) {
+        throw new Error("No deploy_id on verdict — cannot resume hook");
+      }
+      const res = await fetch("/api/demo/resume", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${await getDemoToken()}`,
+        },
+        body: JSON.stringify({
+          deploy_id: v.deploy_id,
+          action_type,
+          username: "war-room-live",
+        }),
+      });
+      if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        throw new Error(`resume ${res.status}${t ? `: ${t.slice(0, 120)}` : ""}`);
+      }
+    },
+    [liveState.verdict]
+  );
+
   if (mode === "demo") {
-    return { ...demo, mode, setMode };
+    return { ...demo, mode, setMode, resumeVerdictAction: undefined };
   }
+
+  const v = liveState.verdict;
+  const verdictMapped = v
+    ? {
+        level: v.level,
+        summary: v.summary,
+        concerns: v.concerns,
+        action: v.suggested_action,
+        suggested_action: v.suggested_action,
+        deploy_id: v.deploy_id,
+        deploy_id_short:
+          v.deploy_id.length > 8 ? v.deploy_id.slice(-8) : v.deploy_id,
+        acknowledged: Boolean(
+          v.acknowledged ??
+            (v as { acknowledged_at?: string }).acknowledged_at
+        ),
+        acknowledged_by: v.acknowledged_by,
+        action_taken: v.action_taken,
+      }
+    : null;
 
   return {
     state: liveState.state,
@@ -207,16 +254,7 @@ export function useDeploysSSE() {
       age_seconds: t.age_seconds,
       status: t.status as "open" | "resolved",
     })),
-    verdict: liveState.verdict
-      ? {
-          level: liveState.verdict.level,
-          summary: liveState.verdict.summary,
-          concerns: liveState.verdict.concerns,
-          action: liveState.verdict.suggested_action,
-          suggested_action: liveState.verdict.suggested_action,
-          acknowledged: false,
-        }
-      : null,
+    verdict: verdictMapped,
     setVerdict: () => {},
     running: true,
     runDemo: () => {},
@@ -226,5 +264,6 @@ export function useDeploysSSE() {
     budgetPct: 100,
     mode,
     setMode,
+    resumeVerdictAction,
   };
 }

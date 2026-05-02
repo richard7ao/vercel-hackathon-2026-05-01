@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useDeploysSSE } from "./hooks/useDeploysSSE";
 import { TopBar } from "./components/TopBar";
 import { StatusBlock } from "./components/StatusBlock";
@@ -14,10 +14,66 @@ import { CountdownChip } from "./components/CountdownChip";
 import { SuspendedOverlay } from "./components/SuspendedOverlay";
 import { ResumePulse } from "./components/ResumePulse";
 import { RehearsalModal } from "./components/RehearsalModal";
+import { RehearsalDock } from "./components/RehearsalDock";
+import { runLiveRehearsals, type RehearsalRow } from "./rehearsal/runLiveRehearsals";
 
 export default function WarRoom() {
   const data = useDeploysSSE();
-  const [rehearsalOpen, setRehearsalOpen] = useState(false);
+  const [traceRehearsalOpen, setTraceRehearsalOpen] = useState(false);
+  const [boardDockOpen, setBoardDockOpen] = useState(false);
+  const [boardRows, setBoardRows] = useState<RehearsalRow[]>([]);
+  const [boardRunning, setBoardRunning] = useState(false);
+  const boardAbortRef = useRef<AbortController | null>(null);
+
+  const startBoardRehearsal = useCallback(async () => {
+    if (boardRunning) return;
+    setTraceRehearsalOpen(false);
+    setBoardDockOpen(true);
+    setBoardRows([]);
+    setBoardRunning(true);
+    const ctrl = new AbortController();
+    boardAbortRef.current = ctrl;
+    try {
+      await runLiveRehearsals(ctrl.signal, setBoardRows);
+    } finally {
+      setBoardRunning(false);
+      boardAbortRef.current = null;
+    }
+  }, [boardRunning]);
+
+  const abortBoardRehearsal = useCallback(() => {
+    boardAbortRef.current?.abort();
+    setBoardRunning(false);
+  }, []);
+
+  const dismissBoardDock = useCallback(() => {
+    boardAbortRef.current?.abort();
+    setBoardRunning(false);
+    setBoardDockOpen(false);
+    setBoardRows([]);
+  }, []);
+
+  const [liveVerdictDismissed, setLiveVerdictDismissed] = useState(false);
+  const lastLiveVerdictDeployRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (data.mode !== "live") {
+      setLiveVerdictDismissed(false);
+      lastLiveVerdictDeployRef.current = undefined;
+      return;
+    }
+    const id = data.verdict?.deploy_id;
+    if (id && id !== lastLiveVerdictDeployRef.current) {
+      lastLiveVerdictDeployRef.current = id;
+      setLiveVerdictDismissed(false);
+    }
+    if (!id) {
+      lastLiveVerdictDeployRef.current = undefined;
+    }
+  }, [data.mode, data.verdict?.deploy_id]);
+
+  const verdictForModal =
+    data.verdict && (data.mode !== "live" || !liveVerdictDismissed) ? data.verdict : null;
 
   return (
     <div className="shell">
@@ -53,14 +109,18 @@ export default function WarRoom() {
       </div>
 
       <VerdictModal
-        verdict={data.verdict}
+        verdict={verdictForModal}
         onClose={() => {
-          if (data.verdict && !data.verdict.acknowledged) {
+          if (data.mode !== "live" && data.verdict && !data.verdict.acknowledged) {
             data.setVerdict({ ...data.verdict, acknowledged: true, acknowledged_by: "you" });
-          } else {
+          } else if (data.mode !== "live") {
             data.setVerdict(null);
           }
         }}
+        onResumeAction={data.resumeVerdictAction}
+        onDismissModal={
+          data.mode === "live" ? () => setLiveVerdictDismissed(true) : undefined
+        }
       />
 
       <div className="demo-ctrl">
@@ -77,13 +137,43 @@ export default function WarRoom() {
           </>
         )}
         {data.mode === "live" && (
-          <button className="btn primary" onClick={() => setRehearsalOpen(true)}>
-            ◈ REHEARSE
-          </button>
+          <>
+            <button
+              type="button"
+              className="btn primary"
+              disabled={boardRunning || traceRehearsalOpen}
+              title="Full trace log in a modal"
+              onClick={() => {
+                setBoardDockOpen(false);
+                setTraceRehearsalOpen(true);
+              }}
+            >
+              ◈ TRACE VIEW
+            </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={boardRunning}
+              title="Same 3 rehearsals; watch timeline, agents, and SSE on the board"
+              onClick={() => void startBoardRehearsal()}
+            >
+              ◈ BOARD REHEARSAL
+            </button>
+          </>
         )}
       </div>
 
-      <RehearsalModal open={rehearsalOpen} onClose={() => setRehearsalOpen(false)} />
+      <RehearsalModal open={traceRehearsalOpen} onClose={() => setTraceRehearsalOpen(false)} />
+
+      {data.mode === "live" && boardDockOpen && (
+        <RehearsalDock
+          rows={boardRows}
+          running={boardRunning}
+          onAbort={abortBoardRehearsal}
+          onDismiss={dismissBoardDock}
+          onRerun={() => void startBoardRehearsal()}
+        />
+      )}
 
       {data.loopState === "holding" && (
         <CountdownChip nextPlayInMs={data.nextPlayInMs} />

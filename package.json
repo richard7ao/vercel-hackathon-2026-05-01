@@ -7,7 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "verify:tier1": "next build",
+    "verify:tier3": "vitest run",
+    "verify:tier4": "bash scripts/verify-tier4.sh",
+    "verify:canonical": "node scripts/verify-canonical.mjs",
+    "verify:integrations": "bash scripts/smoke-integrations.sh",
+    "verify": "npm run verify:tier1 && npm run verify:tier3 && npm run verify:tier4 && npm run test:e2e"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.74",
@@ -32,6 +39,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
+    "@playwright/test": "^1.57.0",
     "tsx": "^4.21.0",
     "typescript": "^5",
     "vitest": "^4.1.5"

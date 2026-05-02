@@ -1,103 +1,147 @@
 # Bridge — Session Summary (2026-05-02)
 
+This note describes **what landed in the repo this session**. It also separates **interim workarounds** (to get LLMs executing under WDK) from **submission targets** in [CLAUDE.md](CLAUDE.md) (AI Gateway + `DurableAgent` investigators).
+
+---
+
+## Compliance vs CLAUDE.md (project rules)
+
+[CLAUDE.md](CLAUDE.md) lists absolute constraints. Current code diverges on two LLM-related rows:
+
+| Constraint (CLAUDE.md) | Current code |
+|------------------------|--------------|
+| All LLM calls through **Vercel AI Gateway**; model strings like `anthropic/claude-sonnet-4-6`; **no raw provider keys** | [lib/ai-gateway.ts](lib/ai-gateway.ts) uses `@ai-sdk/anthropic` with **`CLAUDE_KEY`** (direct Anthropic). |
+| Investigator agents must be **`DurableAgent` sub-workflows** | Agents are separate `"use workflow"` files but call **`generateText()`** / **`generateObject()`** from the AI SDK — there is **no `DurableAgent` import** under `workflows/**/*.ts` today. |
+
+**Doc and audit drift:** [README.md](README.md) and [scripts/final-audit.sh](scripts/final-audit.sh) still describe **DurableAgent** in the synthesizer and three agent workflows. That no longer matches the TypeScript sources. Either restore `DurableAgent` per track/spec or update README and the audit script so claims match code (prefer restoring code per CLAUDE.md).
+
+**Task state caveat:** `tasks/state-2026-05-02-track1-fixes.json` may mark T1 DurableAgent work complete while the tree above does not contain `DurableAgent` in workflows — treat **git + grep** as source of truth until reconciled.
+
+---
+
 ## What Changed This Session
 
-### 1. LLM Integration Fixed (ALL 4 files)
+### 1. LLM integration — interim fix (4 files)
 
-**Problem:** All investigator agents and synthesizer used `DurableAgent.stream()` which requires `WritableStream` — unavailable in WDK runtime. Every LLM call silently fell back to deterministic logic. **Zero AI was actually running.**
+**Problem:** Investigator agents and synthesizer used `DurableAgent.stream()`, which requires `WritableStream` — unavailable in the WDK runtime used here. LLM paths could fall through to deterministic behavior without obvious failure.
 
-**Fix:** Replaced `DurableAgent.stream()` with non-streaming AI SDK calls:
+**Interim fix:** Replaced streaming `DurableAgent` usage with **non-streaming** AI SDK calls so models actually run:
 
 | File | Before | After |
 |------|--------|-------|
 | `workflows/agents/history.ts` | `DurableAgent.stream()` | `generateText()` + tools + `stopWhen: stepCountIs(3)` |
 | `workflows/agents/diff.ts` | `DurableAgent.stream()` | `generateText()` + tools + `stopWhen: stepCountIs(3)` |
-| `workflows/agents/dependency.ts` | `DurableAgent.stream()` | `generateText()` + tools + `stopWhen: stepCountIs(3)` |
+| `workflows/agents/dependency.ts` | `DurableAgent.stream()` | `generateText()` + tools + `stepCountIs(3)` |
 | `workflows/synthesizer.ts` | `DurableAgent.stream()` + `Output.object()` | `generateObject()` + `schema` |
 
-All files also add `globalThis.fetch = fetch` (from `workflow` package) for WDK durable replay.
+All of the above also set `globalThis.fetch = fetch` (from the `workflow` package) for durable replay.
 
-### 2. Switched from AI Gateway to Direct Anthropic API
+**Intended direction (submission):** Route LLMs through **AI Gateway** and reinstate **`DurableAgent`** where the track pitch requires it (non-streaming or WDK-supported patterns per [docs/superpowers/specs/2026-05-02-track1-fixes-design.md](docs/superpowers/specs/2026-05-02-track1-fixes-design.md) / WDK docs), rather than treating `generateText` + direct keys as the long-term architecture.
 
-**Problem:** Vercel AI Gateway wasn't being billed / wasn't working for LLM calls.
+### 2. Gateway → direct Anthropic — interim routing
 
-**Fix:** `lib/ai-gateway.ts` rewired from `@ai-sdk/openai-compatible` → `@ai-sdk/anthropic`:
-- Uses `CLAUDE_KEY` env var (direct Anthropic API key)
-- All model strings mapped to `claude-haiku-4-5-20251001` (cheapest model)
-- `getGateway().chatModel()` interface unchanged — zero call-site changes needed
+**Problem:** Vercel AI Gateway was not reliably used for these LLM calls (billing / wiring issues in session).
 
-### 3. Rehearsal UI Added (previous sub-session)
-- `RehearsalModal.tsx` — auto-runs 3 rehearsal types (ack/hold/page) with live traces
-- Rehearsal button appears in LIVE mode only
-- Reset button appears in DEMO mode only
+**Interim fix:** [lib/ai-gateway.ts](lib/ai-gateway.ts) was rewired to `@ai-sdk/anthropic`:
+- Uses **`CLAUDE_KEY`** (direct Anthropic API key)
+- Model map sends logical ids (e.g. `anthropic/claude-sonnet-4-6`) to **`claude-haiku-4-5-20251001`**
+- `getGateway().chatModel()` signature unchanged at call sites
 
-### 4. README Rewritten for Judges
+This is **not** the CLAUDE.md-compliant end state; it unblocks “real model output” until Gateway + `DurableAgent` are restored.
+
+### 3. Rehearsal UI (previous sub-session)
+
+- `RehearsalModal.tsx` — auto-runs three rehearsal types (ack / hold / page) with live traces
+- Rehearsal control in LIVE mode only; reset control in DEMO mode only
+
+### 4. README for judges
+
 - Architecture diagram, durability table, tech stack, project structure
-- Credits section says Claude Opus 4.7 Max Effort
+- Credits mention Claude Opus 4.7 Max Effort  
+  **Note:** README text still claims DurableAgent in several places; see compliance section above.
 
 ---
 
-## Files Modified (This Session)
+## Files Modified (this session)
 
 ```
-lib/ai-gateway.ts                    — Rewired to @ai-sdk/anthropic + Haiku
+lib/ai-gateway.ts                    — @ai-sdk/anthropic + Haiku map + CLAUDE_KEY
 workflows/agents/history.ts          — generateText() + durable fetch
 workflows/agents/diff.ts             — generateText() + durable fetch
 workflows/agents/dependency.ts       — generateText() + durable fetch
 workflows/synthesizer.ts             — generateObject() + durable fetch
-README.md                            — Updated model refs, durability table
-package.json / package-lock.json     — Added @ai-sdk/anthropic
+README.md                            — Model refs, durability table (may be ahead of code)
+package.json / package-lock.json     — @ai-sdk/anthropic
 ```
 
 ---
 
-## Environment Variables Needed
+## Environment variables
 
-| Variable | Status | Notes |
-|----------|--------|-------|
-| `CLAUDE_KEY` | **NEEDS REAL VALUE** | Set on Vercel but has placeholder value. Must be real `sk-ant-...` key |
+| Variable | Role | Notes |
+|----------|------|-------|
+| **`AI_GATEWAY_API_KEY`** | **Track-compliant LLM path** (CLAUDE.md) | Required once `lib/ai-gateway.ts` is switched back to Gateway. Use [CLAUDE.md](CLAUDE.md) AI Gateway smoke test to verify. |
+| **`CLAUDE_KEY`** | **Current code path only** | Direct Anthropic; **violates** “no raw provider keys” if shipped as final demo story. Replace with Gateway for submission alignment. |
 | `REDIS_URL` | OK | Vercel Marketplace Redis |
 | `GITHUB_WEBHOOK_SECRET` | OK | |
 | `DISCORD_BOT_TOKEN` | OK | |
 | `DISCORD_PUBLIC_KEY` | OK | |
 | `DISCORD_CHANNEL_ID` | OK | |
-| `DEMO_RESET_TOKEN` | OK | `bridge-demo-2026` |
+| `DEMO_RESET_TOKEN` | OK | e.g. `bridge-demo-2026` |
 | `KV_INTERNAL_SECRET` | OK | |
 
 ---
 
-## What Still Needs Doing
+## What still needs doing
 
-### Must-do before submission:
-1. **Set real CLAUDE_KEY** — current value is placeholder `YOUR_ANT...`
-2. **Test LLM call end-to-end** — trigger a workflow and verify Haiku actually responds (check Vercel function logs)
-3. **Deploy** — `git push` to trigger Vercel redeploy with new code
+### Must-do before submission (CLAUDE.md order)
 
-### Nice-to-have (from user feedback):
-4. Rename auto-run modal from "REHEARSE" to "SYSTEM CHECK"
-5. Make rehearsal interactive — user triggers workflow, then clicks ack/hold/page on the dashboard themselves
-6. Dashboard should stay visible during rehearsal (modal blocks it currently)
-7. Add external verification links (Vercel logs, KV state viewer)
+1. **Restore Vercel AI Gateway** for all LLM traffic (`AI_GATEWAY_API_KEY`, `anthropic/claude-sonnet-4-6` or chosen Gateway model string) per [CLAUDE.md](CLAUDE.md); remove reliance on **`CLAUDE_KEY`** for the pitch unless you explicitly document a track exception.
+2. **Restore `DurableAgent`** for investigator sub-workflows (and synthesizer as spec’d) **or** honestly rewrite README + [scripts/final-audit.sh](scripts/final-audit.sh) — default is **restore code** to match constraints and existing audit.
+3. **End-to-end LLM proof** — trigger a workflow; confirm real model output in logs (agent tags like `[historyAgent]`, `[diffAgent]`, `[synthesizer]`).
+4. **Deploy** — `git push` to Vercel after the above.
 
----
+### Nice-to-have (user feedback)
 
-## Key Architecture Decisions
-
-- **Haiku over Sonnet/Opus**: $20 budget, Haiku is ~80x cheaper. Investigator prompts are simple classification tasks — Haiku is fine.
-- **`generateText()` over `DurableAgent`**: WDK doesn't support `WritableStream`. Non-streaming calls work fine for our use case (short responses, tool use).
-- **`globalThis.fetch = fetch`**: WDK's durable fetch enables replay on crash recovery. Without it, LLM calls would succeed but not be replay-safe.
-- **Direct Anthropic over AI Gateway**: AI Gateway billing wasn't active. Direct API with `CLAUDE_KEY` is simpler and confirmed working.
-- **Model map in gateway**: All call sites still say `anthropic/claude-sonnet-4-6` but the gateway silently routes to Haiku. Easy to upgrade later.
+5. Rename auto-run modal from “REHEARSE” to “SYSTEM CHECK”
+6. Make rehearsal interactive — user triggers workflow, then uses ack / hold / page on the dashboard
+7. Keep dashboard visible during rehearsal (modal currently obscures it)
+8. Add external verification links (Vercel logs, KV state viewer)
 
 ---
 
-## How to Test LLM Integration
+## Architecture notes
+
+### Interim (this session)
+
+- **Haiku via model map:** Budget-friendly; investigator prompts are relatively light.
+- **`generateText()` / `generateObject()`:** Avoids `WritableStream` requirement from `DurableAgent.stream()` in this runtime.
+- **`globalThis.fetch = fetch`:** Keeps outbound HTTP replay-safe under WDK.
+- **Direct Anthropic:** Unblocked billing/wiring for the session; **not** the documented submission pattern.
+
+### Submission target (CLAUDE.md + track)
+
+- **AI Gateway only** for LLM calls; **`AI_GATEWAY_API_KEY`** in env; provider/model strings as in CLAUDE.md canonical snippets.
+- **`DurableAgent`** for the three LLM investigators and synthesizer as durable sub-workflow story, implemented in a way WDK actually runs (see track fix design doc).
+- **Hooks:** Pause/resume remains a real `createHook` / `resumeHook` + Discord interaction (unchanged requirement; not re-audited in this summary).
+
+---
+
+## How to test LLM integration
+
+**1. AI Gateway (canonical — matches CLAUDE.md)**
+
+After `vercel env pull .env.local` (or a local `.env.local` with `AI_GATEWAY_API_KEY`):
 
 ```bash
-# After setting real CLAUDE_KEY:
+node -e "require('dotenv').config({path:'.env.local'}); fetch('https://gateway.ai.vercel.app/v1/chat/completions', { method: 'POST', headers: { Authorization: 'Bearer ' + process.env.AI_GATEWAY_API_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'anthropic/claude-sonnet-4-6', messages: [{ role: 'user', content: 'reply OK' }], max_tokens: 5 }) }).then(r => process.exit(r.ok ? 0 : 1))"
+```
+
+**2. Current implementation (direct Anthropic — only while code uses `CLAUDE_KEY`)**
+
+```bash
 vercel env pull .env.local --environment production --yes
 
-# Quick local test:
 npx tsx -e "
   require('dotenv').config({path:'.env.local'});
   const {createAnthropic} = require('@ai-sdk/anthropic');
@@ -105,18 +149,22 @@ npx tsx -e "
   const p = createAnthropic({apiKey: process.env.CLAUDE_KEY});
   generateText({model: p.chat('claude-haiku-4-5-20251001'), prompt: 'say OK', maxOutputTokens: 5}).then(r => console.log('LLM:', r.text));
 "
+```
 
-# Full workflow test (production):
+**3. Full workflow (production demo endpoint)**
+
+```bash
 curl -X POST https://vercel-hackathon-2026-05-01.vercel.app/api/demo/trigger \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer bridge-demo-2026' \
   -d '{"sha":"llm_test_001","score":0.9}'
-# Then check Vercel function logs for "[historyAgent]", "[diffAgent]", "[synthesizer]"
 ```
+
+Then inspect Vercel function logs for `[historyAgent]`, `[diffAgent]`, `[synthesizer]`.
 
 ---
 
-## Commit History (recent)
+## Commit history (recent)
 
 ```
 14b46c5  final working version (safe rollback point)
@@ -125,4 +173,6 @@ curl -X POST https://vercel-hackathon-2026-05-01.vercel.app/api/demo/trigger \
 b819ff8  feat: Track 1 compliance — DurableAgent, real WDK Hooks, honest docs
 ```
 
-Current changes are unstaged. Commit when CLAUDE_KEY is set and LLM is verified working.
+`b819ff8` predates the interim `generateText` + direct Anthropic path; current tree may not satisfy that commit message or `final-audit.sh` until compliance work lands.
+
+Unstaged changes: commit after Gateway + DurableAgent (or honest doc/audit) alignment and LLM verification, not only after setting `CLAUDE_KEY`.

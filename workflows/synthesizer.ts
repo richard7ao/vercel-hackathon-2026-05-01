@@ -54,7 +54,12 @@ Score: ${score}`,
 
   await redisSet(
     `verdicts:${deploy_id}`,
-    JSON.stringify({ ...verdict, synthesized_at: new Date().toISOString() })
+    JSON.stringify({
+      type: "verdict",
+      deploy_id,
+      ...verdict,
+      synthesized_at: new Date().toISOString(),
+    })
   );
 
   return verdict;

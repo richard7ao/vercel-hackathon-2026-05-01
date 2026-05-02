@@ -5,6 +5,9 @@ import type { Deploy } from "../data";
 import { ModeToggle } from "./ModeToggle";
 
 const REPO = process.env.NEXT_PUBLIC_MONITORED_REPO || "meridian/core-banking";
+/** GitHub `owner/name` used for webhooks / e2e (logical product is `meridian/core-banking`). */
+const GH_DEMO_REPO =
+  process.env.NEXT_PUBLIC_DEMO_GITHUB_REPO || "richard7ao/meridian-core-banking";
 
 type WorkflowInfo = {
   id: string;
@@ -38,8 +41,14 @@ export function TopBar({
           BRIDGE<span className="slash">//</span>
           <span className="sub">PRODUCTION WAR ROOM</span>
         </span>
-        <span className="crumb">
+        <span className="crumb" title="Logical product name (MONITORED_REPO)">
           REPO <b>{REPO}</b>
+        </span>
+        <span
+          className="crumb"
+          title="GitHub repository Bridge watches via webhook — clone path often ../meridian-core-banking"
+        >
+          GH <b>{GH_DEMO_REPO}</b>
         </span>
         <span className="crumb">
           BRANCH <b>main</b>

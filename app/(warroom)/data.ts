@@ -65,6 +65,8 @@ export type Verdict = {
   summary: string;
   concerns: string[];
   action: string;
+  /** Full workflow deploy id — required for live `POST /api/demo/resume`. */
+  deploy_id?: string;
   deploy_id_short?: string;
   suggested_action?: string;
   acknowledged?: boolean;

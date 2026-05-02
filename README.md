@@ -31,7 +31,7 @@ The status block flips from **ALL CLEAR** through **MONITORING** to **CRITICAL**
 
 Toggle to **LIVE** mode (or `?live=1`) to see real GitHub webhooks flow through.
 
-In live mode, hit **REHEARSE** to trigger all three response types (Acknowledge / Hold / Page) against the production deployment and watch the traces in real time.
+In live mode, use **TRACE VIEW** for a modal with full step traces, or **BOARD REHEARSAL** to run the same three flows (ack / hold / page) while the timeline, agents, and feed stay on screen (status strip at the bottom).
 
 ---
 

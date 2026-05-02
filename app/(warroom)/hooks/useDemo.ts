@@ -587,7 +587,11 @@ export function useDemo(mode: "demo" | "live" = "demo") {
     if (auto.current) return;
     auto.current = true;
     const t = setTimeout(() => runDemo(), 3000);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      // React Strict Mode (dev) remounts after cleanup; reset so the demo still arms once.
+      auto.current = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

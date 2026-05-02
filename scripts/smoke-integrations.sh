@@ -202,8 +202,8 @@ fetch('https://gateway.ai.vercel.app/v1/chat/completions', {
   method: 'POST',
   headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    model: 'anthropic/claude-haiku-4-5-20251001',
-    messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
+    model: 'anthropic/claude-sonnet-4-6',
+    messages: [{ role: 'user', content: 'reply OK' }],
     max_tokens: 5
   }),
   signal: AbortSignal.timeout(15000)
