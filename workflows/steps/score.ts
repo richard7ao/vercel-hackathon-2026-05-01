@@ -22,7 +22,9 @@ function maxSeverity(group: Record<string, unknown>): number {
   for (const hits of Object.values(group)) {
     if (!Array.isArray(hits)) continue;
     for (const h of hits) {
-      if (h && typeof h === "object" && "severity" in h && typeof (h as Record<string, unknown>).severity === "number" && ((h as Record<string, unknown>).severity as number) > max) max = (h as Record<string, unknown>).severity as number;
+      if (!h || typeof h !== "object" || !("severity" in h)) continue;
+      const sev = (h as Record<string, unknown>).severity;
+      if (typeof sev === "number" && sev > max) max = sev;
     }
   }
   return max;
@@ -84,8 +86,8 @@ export async function scoreStep(input: ScoreInput) {
           (f) => f.path
         ),
       });
-    } catch {
-      // KV unavailable — proceed without persistence
+    } catch (err) {
+      console.warn("[score] KV update failed:", err);
     }
   }
 

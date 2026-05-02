@@ -29,7 +29,7 @@ The `# tier2_simplify` blocks already authored in the spec are **informational o
 
 | Rule | Reason |
 |------|--------|
-| Never fake the Slack pause/resume — it must be a real WDK signal/wait round-trip with a real Slack interaction | This IS the WDK durability money shot; faking loses the track |
+| Pause/resume must be a real WDK Hook (`createHook`/`resumeHook`) round-trip with a real Discord button interaction. Polling KV is forbidden. | This IS the WDK durability money shot; faking loses the track |
 | Investigator agents must be `DurableAgent` sub-workflows, not regular API handlers | The pitch *is* "durable sub-workflow tree" — bypassing WDK invalidates the submission |
 | All LLM calls go through Vercel AI Gateway (model strings like `anthropic/claude-sonnet-4-6`); no raw provider keys | Track requirement + zero key management |
 | Demo auto-runs on first paint (3-second calm hold, then play); no required click to start | Judges glance, they don't click |
@@ -97,7 +97,7 @@ node -e "require('dotenv').config({path:'.env.local'}); fetch('https://gateway.a
 
 - **Tier 4 stages own their own dev server** — start in background on PORT=3030, wait until ready, run assertions, kill cleanly. Stages don't share servers (avoid cross-contamination).
 - **Long-running workflows** (anything in `workflows/`) are tested by either: (a) invoking the workflow function directly via `npx tsx` and asserting on KV side effects, or (b) hitting the deployed Vercel URL and asserting on SSE stream content.
-- **Slack pause/resume tests** must run end-to-end with the real Slack workspace — there is no usable mock for WDK signal/wait. T5.1.7's tier4 tests badge rendering via the dev server; full E2E (signal/wait round-trip) is covered in T8.1.8's demo rehearsals.
+- **Discord pause/resume tests** must run end-to-end with a real Discord interaction — there is no usable mock for WDK `createHook`/`resumeHook`. Full E2E (Hook round-trip) is covered in T3.1 chaos drill and T6 adversarial testing.
 
 ## Project-Specific Gotchas
 
@@ -117,7 +117,7 @@ node -e "require('dotenv').config({path:'.env.local'}); fetch('https://gateway.a
 | `next dev` | each Tier 4 | no — per-stage | Stage starts, asserts, kills |
 | Vercel KV | Vercel infra | yes — managed | Stages assume reachable; tested via `KV_REST_API_URL/ping` |
 | AI Gateway | Vercel infra | yes — managed | Stages call directly; failures retry per WDK |
-| Slack | api.slack.com | yes — managed | Stages post real messages to test channel |
+| Discord | discord.com/api | yes — managed | Stages post real embeds to test channel |
 | GitHub API | github.com | yes — managed | Stages use real `gh` CLI / Octokit calls |
 | Bridge production deploy | Vercel | yes — auto-redeploys on push | T0.2.4 captures URL; downstream stages may curl it |
 

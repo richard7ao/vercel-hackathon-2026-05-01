@@ -30,33 +30,40 @@ type SignalResult = {
   temporal: Record<string, unknown>;
 };
 
-function collectHits<T extends { matched: boolean }>(
-  files: IngestResult["files"],
-  detect: (file: IngestResult["files"][0]) => T
-): (T & { file: string })[] {
-  const hits: (T & { file: string })[] = [];
-  for (const file of files) {
-    const result = detect(file);
-    if (result.matched) {
-      hits.push({ ...result, file: file.path });
-    }
-  }
-  return hits;
-}
-
 export async function extractSignals(
   ingest: IngestResult
 ): Promise<SignalResult> {
+  const external_fetch: SignalHit[] = [];
+  const auth_path: SignalHit[] = [];
+  const secret_shapes: SignalHit[] = [];
+  const critical_path: SignalHit[] = [];
+  const new_dependency: DepSignalHit[] = [];
+  const new_endpoint: SignalHit[] = [];
+
+  for (const file of ingest.files) {
+    const fp = file.path;
+    const ef = detectExternalFetch(file);
+    if (ef.matched) external_fetch.push({ ...ef, file: fp });
+    const ap = detectAuthPath(file);
+    if (ap.matched) auth_path.push({ ...ap, file: fp });
+    const ss = detectSecretShapes(file);
+    if (ss.matched) secret_shapes.push({ ...ss, file: fp });
+    const cp = detectCriticalPath(file, CRITICAL_PATHS);
+    if (cp.matched) critical_path.push({ ...cp, file: fp });
+    const nd = detectNewDependency(file);
+    if (nd.matched) new_dependency.push({ ...nd, file: fp });
+    const ne = detectNewEndpoint(file);
+    if (ne.matched) new_endpoint.push({ ...ne, file: fp });
+  }
+
   return {
     structural: {
-      external_fetch: collectHits(ingest.files, (f) => detectExternalFetch(f)),
-      auth_path: collectHits(ingest.files, (f) => detectAuthPath(f)),
-      secret_shapes: collectHits(ingest.files, (f) => detectSecretShapes(f)),
-      critical_path: collectHits(ingest.files, (f) =>
-        detectCriticalPath(f, CRITICAL_PATHS)
-      ),
-      new_dependency: collectHits(ingest.files, (f) => detectNewDependency(f)),
-      new_endpoint: collectHits(ingest.files, (f) => detectNewEndpoint(f)),
+      external_fetch,
+      auth_path,
+      secret_shapes,
+      critical_path,
+      new_dependency,
+      new_endpoint,
     },
     behavioral: {},
     temporal: {},

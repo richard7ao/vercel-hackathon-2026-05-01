@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
+# Smoke harness — pings live external services (API keys, endpoints, webhooks).
 set -uo pipefail
-
-# Integration test script — verifies all API keys, external services, and endpoints.
-# Run: bash scripts/test-integrations.sh
+# This is NOT a unit/integration test suite; it verifies connectivity and credentials.
+# Run: bash scripts/smoke-integrations.sh
 # Requires: .env.local with all keys populated
 
 PASS=0

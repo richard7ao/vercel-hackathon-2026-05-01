@@ -10,7 +10,7 @@ const NODES = [
   { label: "runtime/trace", x: 200, y: 130 },
   { label: "dependency · diff", x: 320, y: 130 },
   { label: "synthesizer", x: 220, y: 170 },
-  { label: "Slack page", x: 220, y: 210 },
+  { label: "Discord page", x: 220, y: 210 },
   { label: "human ack/hold/page", x: 220, y: 250 },
   { label: "resume", x: 220, y: 290 },
 ];

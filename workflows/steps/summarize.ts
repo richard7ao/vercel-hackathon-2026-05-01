@@ -1,16 +1,8 @@
 "use step";
 
 import { generateText } from "ai";
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { setDeploy, getDeploy } from "../../lib/db";
-
-const gateway = createOpenAICompatible({
-  name: "vercel-ai-gateway",
-  baseURL: "https://gateway.ai.vercel.app/v1",
-  headers: {
-    Authorization: `Bearer ${process.env.AI_GATEWAY_API_KEY ?? ""}`,
-  },
-});
+import { getGateway } from "../../lib/ai-gateway";
 
 type SummarizeInput = {
   files: { path: string; patch: string }[];
@@ -35,12 +27,13 @@ export async function summarize(
 
   try {
     const { text } = await generateText({
-      model: gateway.chatModel("anthropic/claude-sonnet-4-6"),
+      model: getGateway().chatModel("anthropic/claude-sonnet-4-6"),
       prompt: `Summarize this code change in exactly 2 sentences. First sentence: what changed. Second sentence: the most likely intent.\n\nCommit message: ${input.commit_message}\n\n<diff>\n${diff}\n</diff>`,
       maxOutputTokens: 150,
     });
     tldr = text.trim();
-  } catch {
+  } catch (err) {
+    console.warn("[summarize] AI Gateway failed, using mock:", err);
     tldr = mockTldr(input);
   }
 
@@ -50,8 +43,8 @@ export async function summarize(
       if (existing) {
         await setDeploy(input.sha, { ...existing, tldr });
       }
-    } catch {
-      // KV unavailable
+    } catch (err) {
+      console.warn("[summarize] KV update failed:", err);
     }
   }
 

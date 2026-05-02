@@ -7,7 +7,7 @@
 // history:file:{path}            — file history
 // history:cochange:{a}:{b}       — co-change frequency
 // history:hour:{path}            — 24-elem array
-// pause_state:{deploy_id}        — Slack pause state
+// pause_state:{deploy_id}        — Discord pause state
 // investigator:{deploy_id}:{agent} — agent findings
 // workflow_cost:{deploy_id}      — token/cost tracking
 
@@ -109,12 +109,10 @@ export async function listDeploys(
   const deployKeys = keys
     .filter((k) => !k.startsWith("deploys:raw:"))
     .slice(0, limit);
-  const results: DeployRecord[] = [];
-  for (const key of deployKeys) {
-    const val = await kv.get<DeployRecord>(key);
-    if (val) results.push(val);
-  }
-  return results;
+  const records = await Promise.all(
+    deployKeys.map((key) => kv.get<DeployRecord>(key))
+  );
+  return records.filter((r): r is DeployRecord => r !== null);
 }
 
 export async function getThreat(

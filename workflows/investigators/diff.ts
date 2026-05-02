@@ -18,7 +18,9 @@ const SECURITY_PATTERNS = [
   { pattern: /process\.env\.\w+.*\|\|.*['"]/, label: "env fallback to hardcoded value" },
 ];
 
-export async function diffInvestigator(
+export { diffDeterministic as diffInvestigator };
+
+export async function diffDeterministic(
   input: InvestigatorInput
 ): Promise<InvestigatorResult> {
   const agent = "diff";

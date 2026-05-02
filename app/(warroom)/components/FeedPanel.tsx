@@ -21,7 +21,7 @@ export function FeedPanel({ feed }: { feed: FeedEntry[] }) {
             className="live-dot"
             style={{ display: "inline-block", marginRight: 6 }}
           />
-          <span style={{ color: "var(--green)" }}>SLACK &middot; CONNECTED</span>
+          <span style={{ color: "var(--green)" }}>DISCORD &middot; CONNECTED</span>
         </div>
       </div>
       <div className="panel-body" style={{ position: "relative" }}>

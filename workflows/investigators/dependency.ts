@@ -7,7 +7,9 @@ import {
 } from "./_base";
 import { detectNewDependency } from "../../lib/signals/structural";
 
-export async function dependencyInvestigator(
+export { dependencyDeterministic as dependencyInvestigator };
+
+export async function dependencyDeterministic(
   input: InvestigatorInput
 ): Promise<InvestigatorResult> {
   const agent = "dependency";

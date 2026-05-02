@@ -6,12 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2.0.45",
     "@octokit/rest": "^22.0.1",
-    "@slack/web-api": "^7.15.1",
     "@workflow/ai": "^4.1.2",
     "ai": "^6.0.174",
     "discord.js": "^14.26.4",
@@ -33,6 +33,7 @@
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.5"
   }
 }

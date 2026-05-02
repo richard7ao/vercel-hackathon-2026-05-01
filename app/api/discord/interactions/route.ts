@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyInteraction, respondToInteraction } from "@/lib/discord";
-import { kv } from "@/lib/db";
+import { verifyInteraction } from "@/lib/discord";
+import { resumeHook } from "workflow/api";
 
 const MAX_BODY_BYTES = 100_000;
 
@@ -39,31 +39,36 @@ export async function POST(req: NextRequest) {
       body.member?.user?.id ?? body.user?.id ?? "unknown";
 
     const DEPLOY_ID_RE = /^[a-zA-Z0-9_\-]{1,64}$/;
-    if (!deployId || !DEPLOY_ID_RE.test(deployId) || !["ack", "hold"].includes(action)) {
+    if (!deployId || !DEPLOY_ID_RE.test(deployId) || !["ack", "hold", "page"].includes(action)) {
       return NextResponse.json({
         type: 4,
         data: { content: "Unknown action." },
       });
     }
 
-    const ts = new Date().toISOString();
-
-    await kv.set(`pause_state:${deployId}`, {
-      action,
-      user,
-      ts,
-    });
-
-    await kv.set(`signal:slack:ack:${deployId}`, {
+    const hookToken = `deploy:ack:${deployId}`;
+    const payload = {
       action_type: action,
       user: { id: userId, username: user },
-      ts,
-    });
+      ts: new Date().toISOString(),
+    };
 
-    const msg =
-      action === "ack"
-        ? `Acknowledged by ${user}. Workflow resuming.`
-        : `Rollback held by ${user}. Deploy paused.`;
+    try {
+      await resumeHook(hookToken, payload);
+    } catch (err) {
+      console.warn("[discord] resumeHook failed:", err);
+      return NextResponse.json(
+        { error: "deploy not found" },
+        { status: 404 }
+      );
+    }
+
+    const msgs: Record<string, string> = {
+      ack: `Acknowledged by ${user}. Workflow resuming.`,
+      hold: `Rollback held by ${user}. Deploy paused.`,
+      page: `On-call paged by ${user}. Escalating.`,
+    };
+    const msg = msgs[action] ?? "Action recorded.";
 
     return NextResponse.json({ type: 4, data: { content: msg } });
   }

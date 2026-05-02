@@ -7,7 +7,9 @@ import {
   emitInvestigatorEvent,
 } from "./_base";
 
-export async function historyInvestigator(
+export { historyDeterministic as historyInvestigator };
+
+export async function historyDeterministic(
   input: InvestigatorInput
 ): Promise<InvestigatorResult> {
   const agent = "history";
@@ -28,7 +30,9 @@ export async function historyInvestigator(
       );
       if (Array.isArray(raw)) knownDirs = raw;
       else if (typeof raw === "string") knownDirs = JSON.parse(raw);
-    } catch {}
+    } catch (err) {
+      console.warn("[history] author lookup failed:", err);
+    }
   }
 
   const touchedDirs = [
@@ -49,18 +53,20 @@ export async function historyInvestigator(
 
   let novelHours = 0;
   const hour = new Date().getUTCHours();
-  for (const file of input.files) {
-    try {
-      const raw = await kv.get<number[] | string>(
-        `history:hour:${file.path}`
-      );
-      const counts = Array.isArray(raw)
-        ? raw
-        : typeof raw === "string"
-          ? JSON.parse(raw)
-          : null;
-      if (!counts || counts[hour] === 0) novelHours++;
-    } catch {}
+  const hourResults = await Promise.all(
+    input.files.map((file) =>
+      kv
+        .get<number[] | string>(`history:hour:${file.path}`)
+        .catch(() => null)
+    )
+  );
+  for (const raw of hourResults) {
+    const counts = Array.isArray(raw)
+      ? raw
+      : typeof raw === "string"
+        ? JSON.parse(raw)
+        : null;
+    if (!counts || counts[hour] === 0) novelHours++;
   }
 
   let severity: "low" | "medium" | "high" | "critical" = "low";

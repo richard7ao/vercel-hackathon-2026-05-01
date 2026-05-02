@@ -1,4 +1,4 @@
-import { kv, listDeploys } from "@/lib/db";
+import { kv } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -7,80 +7,52 @@ export async function GET() {
   let lastSeenKeys = new Set<string>();
 
   const stream = new ReadableStream({
-    cancel() {
-      // Cleanup handled by heartbeat catch below
-    },
     async start(controller) {
       controller.enqueue(encoder.encode(": connected\n\n"));
 
       const poll = async () => {
         try {
-          const deployKeys = await kv.list("deploys:");
-          const currentKeys = new Set(
-            deployKeys.filter((k) => !k.startsWith("deploys:raw:"))
+          const prefixes = [
+            { prefix: "deploys:", event: "deploy", exclude: "deploys:raw:" },
+            { prefix: "verdicts:", event: "verdict" },
+            { prefix: "investigator:", event: "investigator" },
+            { prefix: "threats:", event: "threat_surface" },
+          ] as const;
+
+          const lists = await Promise.all(
+            prefixes.map((p) => kv.list(p.prefix))
           );
 
-          for (const key of currentKeys) {
-            if (!lastSeenKeys.has(key)) {
-              const record = await kv.get(key);
-              if (record) {
+          const newKeys: { key: string; event: string }[] = [];
+          const allKeys: string[] = [];
+
+          for (let i = 0; i < prefixes.length; i++) {
+            const { event, exclude } = prefixes[i] as { event: string; exclude?: string };
+            for (const key of lists[i]) {
+              if (exclude && key.startsWith(exclude)) continue;
+              allKeys.push(key);
+              if (!lastSeenKeys.has(key)) {
+                newKeys.push({ key, event });
+              }
+            }
+          }
+
+          if (newKeys.length > 0) {
+            const records = await Promise.all(
+              newKeys.map((nk) => kv.get(nk.key))
+            );
+            for (let i = 0; i < newKeys.length; i++) {
+              if (records[i]) {
                 controller.enqueue(
                   encoder.encode(
-                    `event: deploy\ndata: ${JSON.stringify(record)}\n\n`
+                    `event: ${newKeys[i].event}\ndata: ${JSON.stringify(records[i])}\n\n`
                   )
                 );
               }
             }
           }
 
-          const verdictKeys = await kv.list("verdicts:");
-          for (const key of verdictKeys) {
-            if (!lastSeenKeys.has(key)) {
-              const record = await kv.get(key);
-              if (record) {
-                controller.enqueue(
-                  encoder.encode(
-                    `event: verdict\ndata: ${JSON.stringify(record)}\n\n`
-                  )
-                );
-              }
-            }
-          }
-
-          const investigatorKeys = await kv.list("investigator:");
-          for (const key of investigatorKeys) {
-            if (!lastSeenKeys.has(key)) {
-              const record = await kv.get(key);
-              if (record) {
-                controller.enqueue(
-                  encoder.encode(
-                    `event: investigator\ndata: ${JSON.stringify(record)}\n\n`
-                  )
-                );
-              }
-            }
-          }
-
-          const threatKeys = await kv.list("threats:");
-          for (const key of threatKeys) {
-            if (!lastSeenKeys.has(key)) {
-              const record = await kv.get(key);
-              if (record) {
-                controller.enqueue(
-                  encoder.encode(
-                    `event: threat_surface\ndata: ${JSON.stringify(record)}\n\n`
-                  )
-                );
-              }
-            }
-          }
-
-          lastSeenKeys = new Set([
-            ...currentKeys,
-            ...verdictKeys,
-            ...investigatorKeys,
-            ...threatKeys,
-          ]);
+          lastSeenKeys = new Set(allKeys);
         } catch (err) {
           controller.enqueue(
             encoder.encode(

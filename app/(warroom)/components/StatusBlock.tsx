@@ -51,7 +51,7 @@ export function StatusBlock({
         </div>
         <div className="kv">
           <span className="k">CHANNEL</span>
-          <span className="v">#deploys &middot; slack</span>
+          <span className="v">#deploys &middot; discord</span>
         </div>
         <div className="kv">
           <span className="k">SYNTH</span>

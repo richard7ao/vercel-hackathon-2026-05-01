@@ -1,3 +1,5 @@
+import type { Level } from "./verdict-levels";
+
 export type StatusEvent = {
   type: "status";
   state: "all_clear" | "monitoring" | "anomaly" | "critical";
@@ -45,7 +47,7 @@ export type FeedEvent = {
 export type VerdictEvent = {
   type: "verdict";
   deploy_id: string;
-  level: "benign" | "watch" | "investigate" | "critical";
+  level: Level;
   summary: string;
   concerns: string[];
   suggested_action: string;

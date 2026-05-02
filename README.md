@@ -2,7 +2,7 @@
 
 ![Bridge war room in CRITICAL state](docs/screenshot-critical.png)
 
-> **A durable multi-agent system that watches a codebase's deployments. When code ships, it scores the push for risk, dispatches up to five specialist investigator agents in parallel, collapses their findings into a single verdict, and pauses for a human acknowledgement via Discord — all over a Vercel Workflow Development Kit (WDK) backbone that survives crashes, redeploys, and pauses for as long as humans need.**
+> **A durable multi-agent system that watches a codebase's deployments. When code ships, it scores the push for risk, dispatches specialist investigator agents in parallel (three as DurableAgent sub-workflows, two as deterministic stubs), collapses their findings into a single verdict via a DurableAgent synthesizer, and pauses for a human acknowledgement via Discord using WDK's `createHook`/`resumeHook` — all over a Vercel Workflow Development Kit (WDK) backbone that survives crashes, redeploys, and pauses for as long as humans need.**
 
 ---
 
@@ -17,7 +17,7 @@
 
 ## What you're looking at
 
-Open the **live demo** above and you land on a Bloomberg-terminal-style war room. By default it auto-runs a 25-second simulation of a risky deploy: a new hire pushes a change to `lib/auth.ts` at 3:42 AM that adds an outbound `fetch()` to a non-allowlisted host. The status block flips from `ALL CLEAR` through `MONITORING` to `CRITICAL`, five investigator agents fan out in parallel and stream their findings, a synthesizer collapses them into a verdict, and the workflow pauses for a Discord acknowledgement. The simulation loops every ~33 seconds.
+Open the **live demo** above and you land on a Bloomberg-terminal-style war room. By default it auto-runs a 25-second simulation of a risky deploy: a new hire pushes a change to `lib/auth.ts` at 3:42 AM that adds an outbound `fetch()` to a non-allowlisted host. The status block flips from `ALL CLEAR` through `MONITORING` to `CRITICAL`, investigator agents fan out in parallel and stream their findings, a DurableAgent synthesizer collapses them into a verdict, and the workflow pauses via `createHook` for a Discord acknowledgement. The simulation loops every ~33 seconds.
 
 A `[ DEMO · auto-loop ]` chip top-right indicates simulation mode. Flip to `[ LIVE · connected ]` (or visit `?live=1`) to subscribe to real GitHub webhooks from `meridian-core-banking`.
 
@@ -37,19 +37,19 @@ The interesting part is the durability story. Each investigator is a sub-workflo
 │                            │ if score >= 0.6                       │
 │                            v                                       │
 │   ┌──────────────────────────────────────────────────────────┐    │
-│   │   dispatch 5 investigator sub-workflows in parallel:     │    │
+│   │   dispatch investigator sub-workflows in parallel:       │    │
 │   │                                                          │    │
-│   │   trace · runtime · history · dependency · diff          │    │
-│   │   (each is a DurableAgent — streaming + retries free)    │    │
+│   │   history · dependency · diff  (DurableAgent workflows)  │    │
+│   │   trace · runtime              (deterministic stubs)     │    │
 │   └──────────────────────────────────────────────────────────┘    │
 │                            │                                       │
 │                            v                                       │
-│                       synthesizer (LLM)                            │
+│                   synthesizer (DurableAgent)                       │
 │                            │                                       │
 │                            v                                       │
-│     post embed + buttons to Discord · PAUSE workflow               │
+│     post embed + buttons to Discord · createHook (PAUSE)           │
 │                            │                                       │
-│                            │ awaits discord:ack:{deploy_id} signal │
+│                            │ awaits resumeHook(deploy:ack:{id})    │
 │                            v                                       │
 │            human clicks Acknowledge / Hold / Page                  │
 │                            │                                       │
@@ -199,13 +199,17 @@ bridge/
 │   └── sse-events.ts                      <- typed SSE event shapes
 ├── workflows/
 │   ├── watchdog.ts                        <- top-level "use workflow"
-│   ├── synthesizer.ts                     <- DurableAgent verdict builder
+│   ├── synthesizer.ts                     <- DurableAgent verdict builder ("use step")
+│   ├── agents/
+│   │   ├── history.ts                        DurableAgent sub-workflow
+│   │   ├── dependency.ts                     DurableAgent sub-workflow
+│   │   └── diff.ts                           DurableAgent sub-workflow
 │   ├── investigators/
 │   │   ├── _base.ts                          shared investigator base
-│   │   ├── trace.ts, runtime.ts              observability inspectors
-│   │   ├── history.ts                        git history inspector
-│   │   ├── dependency.ts                     SBOM diff inspector
-│   │   └── diff.ts                           AST/code diff inspector
+│   │   ├── trace.ts, runtime.ts              deterministic stubs (v2: DurableAgent)
+│   │   ├── history.ts                        deterministic fallback
+│   │   ├── dependency.ts                     deterministic fallback
+│   │   └── diff.ts                           deterministic fallback
 │   └── steps/
 │       ├── ingest.ts                         Octokit commit fetch
 │       ├── extract-signals.ts                signal pipeline
@@ -217,7 +221,8 @@ bridge/
 ├── scripts/
 │   ├── reset-demo.sh                      <- idempotent demo reset
 │   ├── full-demo-rehearsal.sh             <- 5-phase rehearsal script
-│   └── chaos-drill.sh                     <- 7-phase WDK durability test
+│   ├── chaos-drill.sh                     <- WDK durability drill
+│   └── smoke-integrations.sh             <- external service connectivity checks
 ├── demo/
 │   └── script.md                          <- 3-minute recording script
 └── war-room/                              <- Claude Design handoff (visual source)
@@ -225,23 +230,25 @@ bridge/
 
 ## The WDK durability story
 
-This is the core of the submission. Every part of Bridge's investigation pipeline is a durable workflow:
+This is the core of the submission. The investigation pipeline is a tree of durable workflows:
 
 - **`watchdog.ts`** is the top-level workflow (`"use workflow"`). It receives a GitHub push, scores it, and if risky, dispatches investigators.
-- **Each investigator** (`trace`, `runtime`, `history`, `dependency`, `diff`) is a `DurableAgent` sub-workflow. If the function instance dies mid-investigation, it resumes from the last completed step.
-- **The synthesizer** collapses all findings into a verdict, posts it to Discord with action buttons, then **pauses the workflow** using WDK's `signal/wait` primitive.
-- **The workflow stays paused** — surviving redeploys, cold starts, and server restarts — until a human clicks a button in Discord. The interaction webhook writes the signal to KV, and the workflow resumes.
+- **Three investigators** (`history`, `dependency`, `diff`) are `DurableAgent` sub-workflows (`"use workflow"` files in `workflows/agents/`). Each wraps a `DurableAgent` from `@workflow/ai/agent` with domain-specific tools, falling back to deterministic logic if the AI Gateway is unreachable.
+- **Two investigators** (`trace`, `runtime`) are deterministic stubs (`"use step"` in `workflows/investigators/`). Converting them to DurableAgent is deferred to v2 (see `docs/future-development.md`).
+- **The synthesizer** uses a `DurableAgent` to collapse findings into a verdict, posts it to Discord with action buttons, then **pauses the workflow** using `createHook` from the WDK.
+- **The workflow stays paused** — surviving redeploys, cold starts, and server restarts — until a human clicks a button in Discord. The interaction webhook calls `resumeHook(token, payload)`, and the workflow resumes.
 
-The **chaos drill** (`scripts/chaos-drill.sh`) proves this: it kills the dev server mid-investigation, restarts it, and verifies the workflow picks up where it left off. That is the test that makes the WDK pitch real.
+The **chaos drill** (`scripts/chaos-drill.sh`) proves this: it kills the dev server mid-investigation, restarts it, and verifies the workflow picks up where it left off.
 
 ## Verification
 
 ```bash
 npx tsc --noEmit                # type-check (0 errors)
 npx next build                  # production build
+npm test                        # 55 Vitest unit tests (score, synthesizer, watchdog)
+bash scripts/smoke-integrations.sh   # smoke harness — pings live external services
+bash scripts/chaos-drill.sh     # WDK durability drill (kill + restart + verify resume)
 ```
-
-Each of the 83 stages in the spec has inline verify blocks (search `docs/superpowers/specs/` for `# tier1_build`).
 
 ## Deployment
 

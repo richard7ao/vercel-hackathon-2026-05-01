@@ -113,9 +113,15 @@ export function buildPageEmbed(input: {
       },
       {
         type: 2,
-        style: 4,
+        style: 3,
         label: "Hold Rollback",
         custom_id: `hold:${deploy_id}`,
+      },
+      {
+        type: 2,
+        style: 4,
+        label: "PAGE ON-CALL",
+        custom_id: `page:${deploy_id}`,
       },
     ],
   };
@@ -148,7 +154,8 @@ export function verifyInteraction(
       key,
       Buffer.from(signature, "hex")
     );
-  } catch {
+  } catch (err) {
+    console.warn("[discord] signature verification failed:", err);
     return false;
   }
 }

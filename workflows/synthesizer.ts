@@ -1,8 +1,22 @@
 "use step";
 
-import { generateText } from "ai";
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { DurableAgent, Output } from "@workflow/ai/agent";
+import { z } from "zod";
 import { kv } from "../lib/db";
+import { getGateway } from "../lib/ai-gateway";
+import {
+  LEVELS,
+  type Level,
+  SEVERITY_TO_LEVEL,
+  levelIndex,
+} from "../lib/verdict-levels";
+
+const verdictSchema = z.object({
+  level: z.enum(LEVELS),
+  summary: z.string(),
+  concerns: z.array(z.string()).min(3).max(6),
+  suggested_action: z.string(),
+});
 
 type SynthesizerInput = {
   deploy_id: string;
@@ -12,35 +26,11 @@ type SynthesizerInput = {
 };
 
 type Verdict = {
-  level: "benign" | "watch" | "investigate" | "critical";
+  level: Level;
   summary: string;
   concerns: string[];
   suggested_action: string;
 };
-
-const LEVELS = ["benign", "watch", "investigate", "critical"] as const;
-type Level = (typeof LEVELS)[number];
-
-const SEVERITY_TO_LEVEL: Record<string, Level> = {
-  critical: "critical",
-  high: "investigate",
-  medium: "watch",
-  low: "benign",
-};
-
-function levelIndex(l: Level): number {
-  return LEVELS.indexOf(l);
-}
-
-export function escalateLevel(current: string, findingSeverity: string): Level {
-  const currentLevel = LEVELS.includes(current as Level)
-    ? (current as Level)
-    : "benign";
-  const findingLevel = SEVERITY_TO_LEVEL[findingSeverity] ?? "benign";
-  return levelIndex(currentLevel) >= levelIndex(findingLevel)
-    ? currentLevel
-    : findingLevel;
-}
 
 export function derivedVerdict(input: {
   findings: { agent?: string; severity?: string; summary?: string }[];
@@ -57,9 +47,8 @@ export function derivedVerdict(input: {
     }
   }
 
-  let scoreFloor: Level = "benign";
-  if (score >= 0.8) scoreFloor = "investigate";
-  else if (score >= 0.6) scoreFloor = "watch";
+  const scoreFloor: Level =
+    score >= 0.8 ? "investigate" : score >= 0.6 ? "watch" : "benign";
 
   const level =
     levelIndex(findingLevel) >= levelIndex(scoreFloor)
@@ -83,10 +72,11 @@ export function derivedVerdict(input: {
     if (concerns.length < 3) concerns.push("No additional context available.");
   }
 
+  const label = level.charAt(0).toUpperCase() + level.slice(1);
   const topSummary =
     sorted.length > 0 && sorted[0].summary
-      ? `${level.charAt(0).toUpperCase() + level.slice(1)} — ${sorted[0].summary.slice(0, 120)}`
-      : `${level.charAt(0).toUpperCase() + level.slice(1)} risk assessment based on score ${(score * 100).toFixed(0)}%.`;
+      ? `${label} — ${sorted[0].summary.slice(0, 120)}`
+      : `${label} risk assessment based on score ${(score * 100).toFixed(0)}%.`;
 
   const actions: Record<Level, string> = {
     critical:
@@ -105,26 +95,6 @@ export function derivedVerdict(input: {
   };
 }
 
-export function parseLLMVerdict(raw: string): Verdict | null {
-  try {
-    let text = raw.trim();
-    const fenceMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
-    if (fenceMatch) text = fenceMatch[1].trim();
-    const start = text.indexOf("{");
-    const end = text.lastIndexOf("}");
-    if (start === -1 || end === -1) return null;
-    text = text.slice(start, end + 1);
-    const parsed = JSON.parse(text);
-    if (!LEVELS.includes(parsed.level)) return null;
-    if (typeof parsed.summary !== "string") return null;
-    if (!Array.isArray(parsed.concerns)) return null;
-    if (typeof parsed.suggested_action !== "string") return null;
-    return parsed as Verdict;
-  } catch {
-    return null;
-  }
-}
-
 export async function synthesize(input: SynthesizerInput): Promise<Verdict> {
   const { deploy_id, findings, signals, score } = input;
 
@@ -136,24 +106,26 @@ Score: ${score}`;
 
   let verdict: Verdict | null = null;
 
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const gateway = createOpenAICompatible({
-        name: "ai-gateway",
-        baseURL: "https://gateway.ai.vercel.app/v1",
-        headers: { Authorization: `Bearer ${process.env.AI_GATEWAY_API_KEY}` },
-      });
-      const { text } = await generateText({
-        model: gateway.chatModel("anthropic/claude-sonnet-4-6"),
-        prompt,
-        temperature: 0,
-        maxOutputTokens: 512,
-      });
-      verdict = parseLLMVerdict(text);
-      if (verdict) break;
-    } catch {
-      // LLM unavailable, will retry or fall back
+  try {
+    const agent = new DurableAgent({
+      model: () => Promise.resolve(getGateway().chatModel("anthropic/claude-sonnet-4-6")),
+      instructions: "You are a security verdict synthesizer. Analyze inspector findings and produce a structured verdict.",
+    });
+
+    const writable = new WritableStream({ write() {} });
+    const result = await agent.stream({
+      messages: [{ role: "user" as const, content: prompt }],
+      writable,
+      experimental_output: Output.object({ schema: verdictSchema }),
+      maxOutputTokens: 512,
+    });
+
+    const parsed = result.experimental_output;
+    if (parsed && LEVELS.includes(parsed.level)) {
+      verdict = parsed as Verdict;
     }
+  } catch (err) {
+    console.warn("[synthesizer] DurableAgent failed:", err);
   }
 
   if (!verdict) {

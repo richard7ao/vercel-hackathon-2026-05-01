@@ -36,7 +36,7 @@ export async function emitInvestigatorEvent(
   };
   try {
     await kv.set(`investigator:${deploy_id}:${agent}`, event);
-  } catch {
-    // KV unavailable
+  } catch (err) {
+    console.warn(`[investigator:${agent}] KV emit failed:`, err);
   }
 }

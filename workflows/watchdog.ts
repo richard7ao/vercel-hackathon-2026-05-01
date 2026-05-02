@@ -1,12 +1,13 @@
 "use workflow";
 
+import { createHook } from "workflow";
 import { ingest } from "./steps/ingest";
 import { extractSignals } from "./steps/extract-signals";
 import { scoreStep } from "./steps/score";
 import { summarize } from "./steps/summarize";
-import { historyInvestigator } from "./investigators/history";
-import { dependencyInvestigator } from "./investigators/dependency";
-import { diffInvestigator } from "./investigators/diff";
+import { historyAgent as historyInvestigator } from "./agents/history";
+import { dependencyAgent as dependencyInvestigator } from "./agents/dependency";
+import { diffAgent as diffInvestigator } from "./agents/diff";
 import { traceInvestigator } from "./investigators/trace";
 import { runtimeInvestigator } from "./investigators/runtime";
 import { synthesize } from "./synthesizer";
@@ -46,8 +47,18 @@ const DISPATCH_THRESHOLD = Math.max(
 
 const VALID_ACTIONS = new Set(["ack", "hold", "page"]);
 
+const HOLD_DURATION_MINUTES = parseInt(
+  process.env.HOLD_DURATION_MINUTES ?? "30",
+  10
+);
+
+const WDK_PAUSE_MAX_SECONDS = parseInt(
+  process.env.WDK_PAUSE_MAX_SECONDS ?? "86400",
+  10
+);
+
 export function buildSignalName(deploy_id: string): string {
-  return `slack:ack:${deploy_id}`;
+  return `deploy:ack:${deploy_id}`;
 }
 
 export function validateAckPayload(payload: unknown): boolean {
@@ -63,17 +74,8 @@ export function validateAckPayload(payload: unknown): boolean {
 }
 
 export function computeTimeoutAt(now: Date): string {
-  const maxSeconds = parseInt(
-    process.env.WDK_PAUSE_MAX_SECONDS ?? "86400",
-    10
-  );
-  return new Date(now.getTime() + maxSeconds * 1000).toISOString();
+  return new Date(now.getTime() + WDK_PAUSE_MAX_SECONDS * 1000).toISOString();
 }
-
-const HOLD_DURATION_MINUTES = parseInt(
-  process.env.HOLD_DURATION_MINUTES ?? "30",
-  10
-);
 
 export function applyAck(
   verdictRec: Record<string, unknown>,
@@ -105,41 +107,6 @@ export function applyAck(
   return base;
 }
 
-async function waitForSignal(
-  signalName: string,
-  timeoutAt: string
-): Promise<AckPayload> {
-  const deadline = new Date(timeoutAt).getTime();
-  while (Date.now() < deadline) {
-    const val = await kv.get<AckPayload>(`signal:${signalName}`);
-    if (val) {
-      await kv.del(`signal:${signalName}`);
-      return val;
-    }
-    await new Promise((r) => setTimeout(r, 1000));
-  }
-  return {
-    action_type: "timeout",
-    user: { id: "system", username: "timeout" },
-  };
-}
-
-export async function sendAck(
-  deploy_id: string,
-  action_type: string,
-  user: { id: string; username?: string }
-): Promise<void> {
-  const payload = { action_type, user };
-  if (!validateAckPayload(payload)) {
-    throw new Error(`Invalid ack payload: ${JSON.stringify(payload)}`);
-  }
-  const signalName = buildSignalName(deploy_id);
-  await kv.set(`signal:${signalName}`, {
-    ...payload,
-    ts: new Date().toISOString(),
-  });
-}
-
 async function dispatchInvestigators(
   input: InvestigatorInput,
   finalScore: number
@@ -147,22 +114,29 @@ async function dispatchInvestigators(
   if (finalScore < DISPATCH_THRESHOLD) return [];
 
   const mode = process.env.BRIDGE_MODE ?? "production";
-  const agents =
-    mode === "demo"
-      ? [
-          historyInvestigator(input),
-          dependencyInvestigator(input),
-          diffInvestigator(input),
-          traceInvestigator(input),
-          runtimeInvestigator(input),
-        ]
-      : [
-          historyInvestigator(input),
-          dependencyInvestigator(input),
-          diffInvestigator(input),
-        ];
 
-  return Promise.all(agents);
+  type NamedInvestigator = { name: string; promise: Promise<InvestigatorResult> };
+
+  const investigators: NamedInvestigator[] = [
+    { name: "history", promise: historyInvestigator(input) },
+    { name: "dependency", promise: dependencyInvestigator(input) },
+    { name: "diff", promise: diffInvestigator(input) },
+  ];
+
+  if (mode === "demo") {
+    investigators.push(
+      { name: "trace", promise: traceInvestigator(input) },
+      { name: "runtime", promise: runtimeInvestigator(input) },
+    );
+  }
+
+  const settled = await Promise.allSettled(investigators.map((inv) => inv.promise));
+  return settled.map((r, i) => {
+    if (r.status === "fulfilled") return r.value;
+    const agentName = investigators[i].name;
+    console.warn(`[watchdog] investigator ${agentName} failed:`, r.reason);
+    return { agent: agentName, status: "failed" as const, finding: undefined };
+  });
 }
 
 async function synthesizeAndPage(
@@ -195,34 +169,59 @@ async function synthesizeAndPage(
     try {
       const { embed, row } = buildPageEmbed({ deploy_id: sha, verdict });
       await postEmbed(channelId, [embed], [row]);
-    } catch {
-      // Discord unavailable
+    } catch (err) {
+      console.warn("[watchdog] Discord embed post failed:", err);
     }
   }
 
-  // WDK signal/wait — workflow pauses here
-  const signalName = buildSignalName(sha);
+  // WDK Hook — workflow durably suspends here
+  const hookToken = buildSignalName(sha);
   const pausedAt = new Date();
   const timeoutAt = computeTimeoutAt(pausedAt);
 
+  const hook = createHook<AckPayload>({ token: hookToken });
+
   await kv.set(`pause_state:${sha}`, {
     paused_at: pausedAt.toISOString(),
-    expected_signal: signalName,
+    hook_token: hookToken,
     timeout_at: timeoutAt,
   });
 
-  const ackPayload = await waitForSignal(signalName, timeoutAt);
+  let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
+  const ackPayload = await Promise.race([
+    hook,
+    new Promise<AckPayload>((resolve) => {
+      timeoutTimer = setTimeout(
+        () =>
+          resolve({
+            action_type: "timeout",
+            user: { id: "system", username: "timeout" },
+          }),
+        WDK_PAUSE_MAX_SECONDS * 1000
+      );
+    }),
+  ]);
 
-  // Post-resume: apply ack to verdict record in KV
+  clearTimeout(timeoutTimer);
+  hook.dispose();
+
   const existingVerdict =
     (await kv.get<Record<string, unknown>>(`verdicts:${sha}`)) ?? {};
-  const updated = applyAck(existingVerdict, {
-    action_type: ackPayload.action_type,
-    user: ackPayload.user,
-  });
-  await kv.set(`verdicts:${sha}`, updated);
-  await kv.del(`pause_state:${sha}`);
 
+  if (ackPayload.action_type === "timeout") {
+    await kv.set(`verdicts:${sha}`, {
+      ...existingVerdict,
+      timeout_at: new Date().toISOString(),
+    });
+  } else {
+    const updated = applyAck(existingVerdict, {
+      action_type: ackPayload.action_type,
+      user: ackPayload.user,
+    });
+    await kv.set(`verdicts:${sha}`, updated);
+  }
+
+  await kv.del(`pause_state:${sha}`);
   return ackPayload;
 }
 
@@ -264,7 +263,8 @@ export async function watchdog(input: WatchdogInput): Promise<WatchdogResult> {
   let ingestResult;
   try {
     ingestResult = await ingest({ owner, repo: repoName, sha });
-  } catch {
+  } catch (err) {
+    console.warn("[watchdog] ingest failed:", err);
     return { sha, score: 0 };
   }
 
@@ -309,5 +309,3 @@ export async function watchdog(input: WatchdogInput): Promise<WatchdogResult> {
     ack: ack ?? undefined,
   };
 }
-
-export { buildPageEmbed };
