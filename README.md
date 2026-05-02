@@ -56,8 +56,9 @@ Bridge is wired to **two surfaces** in production (and in full local rehearsal):
 |---------|------|
 | **GitHub** | **Push webhook** → `/api/webhooks/github` starts the **watchdog** workflow; **Octokit** pulls commit metadata and patches from the monitored repo. |
 | **Discord** | **Bot REST** posts verdict embeds (with **Ack / Hold / Page** buttons) into your deploy channel; **`/api/discord/interactions`** verifies Discord’s **Ed25519** interaction headers and drives **`resumeHook`** so humans unblock the same paused WDK run the war room shows as suspended — not a fake poll loop. |
+| **Git (rehearsal)** | **`POST /api/demo/git-rehearsal`** (Bearer `DEMO_RESET_TOKEN`) pushes a short-lived canary file to the monitored repo and deletes it after each rehearsal so **TRACE VIEW** / **BOARD REHEARSAL** exercise the same path as a real engineer push, end-to-end. |
 
-Configure **`DISCORD_BOT_TOKEN`**, **`DISCORD_PUBLIC_KEY`**, **`DISCORD_CHANNEL_ID`**, and **`GITHUB_WEBHOOK_SECRET`** (see [Environment Variables](#environment-variables)).
+Configure **`DISCORD_BOT_TOKEN`**, **`DISCORD_PUBLIC_KEY`**, **`DISCORD_CHANNEL_ID`**, **`GITHUB_WEBHOOK_SECRET`**, and **`GITHUB_TOKEN`** (see [Environment Variables](#environment-variables)).
 
 ---
 
@@ -183,7 +184,10 @@ npm run dev
 | `ANTHROPIC_API_KEY` | Optional fallback when `CLAUDE_KEY` is not set (same key, different name). |
 | `AI_GATEWAY_API_KEY` | Vercel AI Gateway (optional today — verify scripts / future Gateway-only path) |
 | `REDIS_URL` | Vercel Marketplace Redis |
+| `GITHUB_TOKEN` | **Fine-grained PAT or classic token** with `contents:write` on the monitored repo — used by Octokit for **ingest** and for **git rehearsal** (`/api/demo/git-rehearsal`: push canary + revert). |
 | `GITHUB_WEBHOOK_SECRET` | `openssl rand -hex 32` |
+| `BRIDGE_REHEARSAL_PATH` | (Optional) Repo path for the rehearsal canary file; default `lib/bridge-rehearsal-canary.ts`. |
+| `BRIDGE_REHEARSAL_REF` | (Optional) Branch to push canary commits to; default `main`. |
 | `DISCORD_BOT_TOKEN` | Discord Developer Portal |
 | `DISCORD_PUBLIC_KEY` | Discord Developer Portal |
 | `DISCORD_CHANNEL_ID` | Right-click channel → Copy ID |

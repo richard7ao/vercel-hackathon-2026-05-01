@@ -41,7 +41,7 @@ export function RehearsalDock({
       <div className="rehearsal-dock-head">
         <span className="rehearsal-dock-title">BOARD REHEARSAL</span>
         <span className="rehearsal-dock-sub">
-          Full dashboard + live SSE — no trace modal. Same 3 hooks as visual rehearsal.
+          Real canary git push → webhook → hook → resume → revert (repeatable). Same 3 actions as trace modal.
         </span>
       </div>
       <div className="rehearsal-dock-chips">

@@ -59,7 +59,12 @@ export function RehearsalModal({ open, onClose }: { open: boolean; onClose: () =
         <div className="rehearsal-body" ref={logRef}>
           {rehearsals.length === 0 && (
             <div className="rehearsal-empty">
-              <p>Full step-by-step traces in this modal (ack / hold / page).</p>
+              <p>
+                Each run <b>pushes a real canary commit</b> to the monitored repo (non-allowlisted{" "}
+                <code>fetch</code>), waits for the GitHub webhook → watchdog → agents → WDK hook, then{" "}
+                <b>reverts</b> the file so you can repeat. Needs <code>GITHUB_TOKEN</code> with{" "}
+                <code>contents:write</code> on that repo.
+              </p>
               <div className="rehearsal-actions-preview">
                 {(["ack", "hold", "page"] as const).map((a) => (
                   <span key={a} className={`rehearsal-action-chip ${ACTION_LABELS[a].cls}`}>
