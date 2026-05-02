@@ -221,6 +221,7 @@ export function useDeploysSSE() {
     reset: () => {},
     loopState: "playing" as const,
     nextPlayInMs: 0,
+    budgetPct: 100,
     mode,
     setMode,
   };

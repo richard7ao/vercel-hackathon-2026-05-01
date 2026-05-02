@@ -33,6 +33,7 @@ export default function WarRoom() {
         agentsStanding={data.agentsStanding}
         mtta={data.mtta}
         score={data.activeDeploy?.score ?? 0}
+        budgetPct={data.budgetPct ?? 100}
       />
 
       <TimelineRow

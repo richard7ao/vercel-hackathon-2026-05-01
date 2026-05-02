@@ -13,6 +13,7 @@ export function StatusBlock({
   agentsStanding,
   mtta,
   score,
+  budgetPct,
 }: {
   state: StatusState;
   uptime: number;
@@ -20,8 +21,11 @@ export function StatusBlock({
   agentsStanding: number;
   mtta: string;
   score: number;
+  budgetPct: number;
 }) {
   const tickedDeploys = useTickedNumber(deploysAnalyzed, 400);
+  const tickedBudget = useTickedNumber(budgetPct, 600);
+  const budgetColor = tickedBudget < 10 ? "var(--red)" : tickedBudget < 30 ? "var(--amber)" : "var(--fg-dim)";
   const [snap, setSnap] = useState(false);
   const prev = useRef(state);
   useEffect(() => {
@@ -34,7 +38,7 @@ export function StatusBlock({
   }, [state]);
 
   return (
-    <div className="status-block" data-state={state}>
+    <div className={"status-block" + (snap ? " snap" : "")} data-state={state}>
       <span className="corner tl" />
       <span className="corner tr" />
       <span className="corner bl" />
@@ -98,7 +102,7 @@ export function StatusBlock({
         </div>
         <div className="kv">
           <span className="k">BUDGET</span>
-          <span className="v">42% remaining</span>
+          <span className="v tab-num" style={{ color: budgetColor }}>{Math.round(tickedBudget)}% remaining</span>
         </div>
       </div>
     </div>

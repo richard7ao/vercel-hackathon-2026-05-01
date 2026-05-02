@@ -79,6 +79,7 @@ export function useDemo(mode: "demo" | "live" = "demo") {
 
   const [threats, setThreats] = useState<Threat[]>(INITIAL_THREATS);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
+  const [budgetPct, setBudgetPct] = useState(100);
   const [running, setRunning] = useState(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -192,6 +193,7 @@ export function useDemo(mode: "demo" | "live" = "demo") {
     setPeakCell(null);
     setThreats(INITIAL_THREATS);
     setVerdict(null);
+    setBudgetPct(100);
     setMtta("1.2s");
   }, [clearAll]);
 
@@ -303,6 +305,7 @@ export function useDemo(mode: "demo" | "live" = "demo") {
         });
       });
     });
+    at(5.4, () => setBudgetPct(92));
     at(5.4, () =>
       pushFeed({
         severity: "warn",
@@ -355,7 +358,12 @@ export function useDemo(mode: "demo" | "live" = "demo") {
       });
     });
 
+    at(8, () => setBudgetPct(78));
+    at(10, () => setBudgetPct(61));
+    at(12, () => setBudgetPct(44));
+
     at(13, () => {
+      setBudgetPct(38);
       finalizeAgent(
         "trace",
         {
@@ -372,6 +380,7 @@ export function useDemo(mode: "demo" | "live" = "demo") {
       });
     });
     at(14, () => {
+      setBudgetPct(31);
       finalizeAgent(
         "history",
         {
@@ -389,6 +398,7 @@ export function useDemo(mode: "demo" | "live" = "demo") {
       });
     });
     at(15, () => {
+      setBudgetPct(25);
       finalizeAgent(
         "dependency",
         {
@@ -404,6 +414,7 @@ export function useDemo(mode: "demo" | "live" = "demo") {
       });
     });
     at(16, () => {
+      setBudgetPct(21);
       finalizeAgent(
         "diff",
         {
@@ -422,6 +433,7 @@ export function useDemo(mode: "demo" | "live" = "demo") {
       setPeakCell({ r: 1, c: 29 });
     });
     at(17, () => {
+      setBudgetPct(18);
       finalizeAgent(
         "runtime",
         {
@@ -604,5 +616,6 @@ export function useDemo(mode: "demo" | "live" = "demo") {
     running,
     loopState,
     nextPlayInMs,
+    budgetPct,
   };
 }
