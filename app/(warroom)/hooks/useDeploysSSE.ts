@@ -14,6 +14,15 @@ import {
 } from "@/lib/sse-events";
 import { useDemo } from "./useDemo";
 
+const LIVE_SSE_EVENTS = [
+  "deploy",
+  "verdict",
+  "investigator",
+  "feed",
+  "threat_surface",
+  "status",
+] as const;
+
 type WarRoomState = {
   state: StatusEvent["state"];
   uptime_seconds: number;
@@ -49,15 +58,24 @@ export function reducer(state: WarRoomState, event: SSEEvent): WarRoomState {
       };
     case "deploy": {
       const exists = state.deploys.some((d) => d.id === event.id);
+      const deploys = exists
+        ? state.deploys.map((d) => (d.id === event.id ? event : d))
+        : [...state.deploys, event];
+      const feedLine: FeedEvent = {
+        type: "feed",
+        deploy_id: event.id,
+        ts: event.pushed_at,
+        severity: "info",
+        message: `Deploy ${event.sha.slice(0, 7)} · ${event.tldr}`,
+      };
       return {
         ...state,
-        deploys: exists
-          ? state.deploys.map((d) => (d.id === event.id ? event : d))
-          : [...state.deploys, event],
+        deploys,
+        feed: exists ? state.feed : [...state.feed.slice(-80), feedLine],
       };
     }
-    case "investigator":
-      return {
+    case "investigator": {
+      const next = {
         ...state,
         investigators: {
           ...state.investigators,
@@ -68,13 +86,39 @@ export function reducer(state: WarRoomState, event: SSEEvent): WarRoomState {
           [event.agent]: event,
         },
       };
+      if (event.status !== "complete") return next;
+      const feedLine: FeedEvent = {
+        type: "feed",
+        deploy_id: event.deploy_id,
+        ts: new Date().toISOString(),
+        severity:
+          event.finding?.severity === "critical" ? "critical" : "info",
+        message: `${event.agent.toUpperCase()} · ${event.finding?.summary ?? "complete"}`,
+      };
+      return {
+        ...next,
+        feed: [...next.feed.slice(-80), feedLine],
+      };
+    }
     case "feed":
       return {
         ...state,
         feed: [...state.feed.slice(-99), event],
       };
-    case "verdict":
-      return { ...state, verdict: event };
+    case "verdict": {
+      const feedLine: FeedEvent = {
+        type: "feed",
+        deploy_id: event.deploy_id,
+        ts: new Date().toISOString(),
+        severity: event.level === "critical" ? "critical" : "info",
+        message: `VERDICT · ${event.level.toUpperCase()} · ${event.summary.slice(0, 120)}`,
+      };
+      return {
+        ...state,
+        verdict: event,
+        feed: [...state.feed.slice(-80), feedLine],
+      };
+    }
     case "threat_surface":
       return { ...state, threats: event.items };
     default:
@@ -132,14 +176,7 @@ export function useDeploysSSE() {
     };
 
     es.onmessage = handler;
-    for (const t of [
-      "deploy",
-      "verdict",
-      "investigator",
-      "feed",
-      "threat_surface",
-      "status",
-    ]) {
+    for (const t of LIVE_SSE_EVENTS) {
       es.addEventListener(t, handler);
     }
 

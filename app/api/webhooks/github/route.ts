@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { redisSet } from "@/lib/db-redis";
 import { start } from "workflow/api";
 import { watchdog } from "@/workflows/watchdog";
+import { getMonitoredRepo } from "@/lib/monitored-repo";
 
 const MAX_BODY_BYTES = 1_000_000; // 1 MB
 const SHA_RE = /^[0-9a-f]{7,40}$/;
@@ -36,13 +37,20 @@ export async function POST(req: Request) {
   const event = req.headers.get("x-github-event");
   const signature = req.headers.get("x-hub-signature-256");
 
+  type GithubPushPayload = {
+    after?: string;
+    before?: string;
+    repository?: { full_name?: string };
+  };
+
   let body: string;
+  let payload: GithubPushPayload;
   try {
     body = await req.text();
     if (body.length > MAX_BODY_BYTES) {
       return NextResponse.json({ error: "Payload too large" }, { status: 413 });
     }
-    JSON.parse(body);
+    payload = JSON.parse(body) as GithubPushPayload;
   } catch {
     return NextResponse.json({ error: "Bad JSON" }, { status: 400 });
   }
@@ -54,14 +62,8 @@ export async function POST(req: Request) {
   if (event !== "push") {
     return NextResponse.json({ ok: true, skipped: event });
   }
-
-  const payload = JSON.parse(body) as {
-    after?: string;
-    before?: string;
-    repository?: { full_name?: string };
-  };
   const sha = sanitizeSha(payload.after);
-  const repo = payload.repository?.full_name ?? process.env.MONITORED_REPO ?? "unknown/unknown";
+  const repo = payload.repository?.full_name ?? getMonitoredRepo();
   const before = payload.before ?? "";
 
   try {

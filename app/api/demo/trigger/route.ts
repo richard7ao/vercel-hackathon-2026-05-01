@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { start } from "workflow/api";
 import { watchdog } from "@/workflows/watchdog";
-import { timingSafeEqual } from "crypto";
-
-function safeTokenCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
-}
+import { unauthorizedUnlessDemoBearer } from "@/lib/demo-bearer";
+import { getMonitoredRepo } from "@/lib/monitored-repo";
 
 export async function POST(req: NextRequest) {
-  const token = req.headers.get("authorization")?.replace("Bearer ", "");
-  const expected = process.env.DEMO_RESET_TOKEN;
-  if (!token || !expected || !safeTokenCompare(token, expected)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = unauthorizedUnlessDemoBearer(req);
+  if (auth) return auth;
 
   const body = (await req.json().catch(() => ({}))) as {
     sha?: string;
@@ -27,7 +20,7 @@ export async function POST(req: NextRequest) {
     await start(watchdog, [
       {
         sha,
-        repo: process.env.MONITORED_REPO ?? "test/repo",
+        repo: getMonitoredRepo(),
         before: "0".repeat(40),
         after: sha,
         _force_score: score,

@@ -2,6 +2,7 @@
 
 import { score, compoundBonus } from "../../lib/score";
 import { redisSet } from "../../lib/db-redis";
+import { buildDeployRedisRecord } from "../../lib/deploy-stream-shape";
 
 type ScoreInput = {
   ingest: {
@@ -53,14 +54,15 @@ function buildSignalFlags(signals: ScoreInput["signals"]): Record<string, boolea
 }
 
 export async function scoreStep(input: ScoreInput) {
+  const temporalRecord =
+    (input.signals.temporal ?? {}) as Record<string, unknown>;
+  const temporalSev =
+    typeof temporalRecord.severity === "number" ? temporalRecord.severity : 0;
+
   const structural = maxSeverity(input.signals.structural ?? {});
   const behavioral = maxSeverity(
     (input.signals.behavioral ?? {}) as Record<string, { severity: number }[]>
   );
-  const temporalSev =
-    typeof (input.signals.temporal as Record<string, unknown>)?.severity === "number"
-      ? ((input.signals.temporal as Record<string, unknown>).severity as number)
-      : 0;
 
   const signalFlags = buildSignalFlags(input.signals);
   const compounds = compoundBonus({ signals: signalFlags });
@@ -76,16 +78,27 @@ export async function scoreStep(input: ScoreInput) {
 
   if (input.ingest.sha) {
     try {
-      await redisSet(`deploys:${input.ingest.sha}`, JSON.stringify({
-        sha: input.ingest.sha,
+      const paths = (input.ingest.files as { path: string }[]).map((f) => f.path);
+      const structKeys = Object.entries(input.signals.structural ?? {})
+        .filter(([, v]) => Array.isArray(v) && v.length > 0)
+        .map(([k]) => k);
+      const behKeys = Object.keys(input.signals.behavioral ?? {});
+      const tempKeys =
+        typeof temporalRecord.severity === "number" ? ["temporal"] : [];
+      const record = buildDeployRedisRecord(input.ingest.sha, {
         score: finalScore,
-        verdict_bucket,
         author: input.ingest.author,
         pushed_at: input.ingest.pushed_at,
-        files_changed: (input.ingest.files as { path: string }[]).map(
-          (f) => f.path
-        ),
-      }));
+        files_changed: paths,
+        tldr: `${verdict_bucket.toUpperCase()} · scoring complete`,
+        signals: {
+          structural: structKeys,
+          behavioral: behKeys,
+          temporal: tempKeys,
+          compounds: compounds > 0 ? [`compound:${compounds}`] : [],
+        },
+      });
+      await redisSet(`deploys:${input.ingest.sha}`, JSON.stringify(record));
     } catch (err) {
       console.warn("[score] KV update failed:", err);
     }

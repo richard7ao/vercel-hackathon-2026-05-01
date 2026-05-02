@@ -12,6 +12,8 @@ import { traceInvestigator } from "./investigators/trace";
 import { runtimeInvestigator } from "./investigators/runtime";
 import { synthesize } from "./synthesizer";
 import { buildPageEmbed } from "../lib/discord";
+import { redisSet } from "../lib/db-redis";
+import { buildDeployRedisRecord } from "../lib/deploy-stream-shape";
 import { kvSet, kvGet, kvDel, postDiscordEmbed } from "./steps/kv-ops";
 import { buildSignalName, applyAck, computeTimeoutAt } from "./watchdog-helpers";
 import type { InvestigatorInput, InvestigatorResult } from "./investigators/_base";
@@ -45,7 +47,6 @@ const DISPATCH_THRESHOLD = Math.max(
   0,
   Math.min(1, parseFloat(process.env.DISPATCH_THRESHOLD ?? "0.6"))
 );
-
 
 async function dispatchInvestigators(
   input: InvestigatorInput,
@@ -156,6 +157,22 @@ export async function watchdog(input: WatchdogInput): Promise<WatchdogResult> {
       sha,
       files: [],
     };
+    try {
+      await redisSet(
+        `deploys:${sha}`,
+        JSON.stringify(
+          buildDeployRedisRecord(sha, {
+            score: _force_score,
+            author: "demo-trigger",
+            tldr: `Demo rehearsal · forced score ${_force_score.toFixed(2)}`,
+            files_changed: [],
+          })
+        )
+      );
+    } catch (err) {
+      console.warn("[watchdog] deploy SSE seed failed:", err);
+    }
+
     const investigators = await dispatchInvestigators(invInput, _force_score);
 
     if (_force_score >= DISPATCH_THRESHOLD && investigators.length > 0) {

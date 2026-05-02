@@ -1,10 +1,20 @@
 import { redisGet, redisScan } from "@/lib/db-redis";
+import { normalizeStreamPayload } from "@/lib/sse-stream-normalize";
 
 export const dynamic = "force-dynamic";
 
+function eventNameForKey(key: string): string | null {
+  if (key.startsWith("deploys:") && !key.startsWith("deploys:raw:")) return "deploy";
+  if (key.startsWith("verdicts:")) return "verdict";
+  if (key.startsWith("investigator:")) return "investigator";
+  if (key.startsWith("threats:")) return "threat_surface";
+  return null;
+}
+
 export async function GET() {
   const encoder = new TextEncoder();
-  let lastSeenKeys = new Set<string>();
+  const lastPayload = new Map<string, string>();
+  let lastStatusSig = "";
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -13,46 +23,66 @@ export async function GET() {
       const poll = async () => {
         try {
           const prefixes = [
-            { prefix: "deploys:", event: "deploy", exclude: "deploys:raw:" },
-            { prefix: "verdicts:", event: "verdict" },
-            { prefix: "investigator:", event: "investigator" },
-            { prefix: "threats:", event: "threat_surface" },
+            "deploys:",
+            "verdicts:",
+            "investigator:",
+            "threats:",
           ] as const;
 
           const lists = await Promise.all(
-            prefixes.map((p) => redisScan(p.prefix + "*"))
+            prefixes.map((p) => redisScan(p + "*"))
           );
 
-          const newKeys: { key: string; event: string }[] = [];
-          const allKeys: string[] = [];
+          const allKeys = lists.flatMap((keys) =>
+            keys.filter((k) => !k.startsWith("deploys:raw:"))
+          );
 
-          for (let i = 0; i < prefixes.length; i++) {
-            const { event, exclude } = prefixes[i] as { event: string; exclude?: string };
-            for (const key of lists[i]) {
-              if (exclude && key.startsWith(exclude)) continue;
-              allKeys.push(key);
-              if (!lastSeenKeys.has(key)) {
-                newKeys.push({ key, event });
-              }
+          for (const key of allKeys) {
+            const raw = await redisGet(key);
+            if (raw === null) continue;
+            if (lastPayload.get(key) === raw) continue;
+            lastPayload.set(key, raw);
+
+            const evName = eventNameForKey(key);
+            if (!evName) continue;
+
+            let parsed: unknown;
+            try {
+              parsed = JSON.parse(raw);
+            } catch {
+              continue;
             }
-          }
 
-          if (newKeys.length > 0) {
-            const records = await Promise.all(
-              newKeys.map((nk) => redisGet(nk.key).then(r => r ? JSON.parse(r) : null).catch(() => null))
+            const normalized = normalizeStreamPayload(key, parsed);
+            if (!normalized) continue;
+
+            controller.enqueue(
+              encoder.encode(
+                `event: ${evName}\ndata: ${JSON.stringify(normalized)}\n\n`
+              )
             );
-            for (let i = 0; i < newKeys.length; i++) {
-              if (records[i]) {
-                controller.enqueue(
-                  encoder.encode(
-                    `event: ${newKeys[i].event}\ndata: ${JSON.stringify(records[i])}\n\n`
-                  )
-                );
-              }
-            }
           }
 
-          lastSeenKeys = new Set(allKeys);
+          const deployCount = allKeys.filter(
+            (k) =>
+              k.startsWith("deploys:") &&
+              !k.startsWith("deploys:raw:")
+          ).length;
+          const statusPayload = {
+            type: "status" as const,
+            state: deployCount > 0 ? ("monitoring" as const) : ("all_clear" as const),
+            uptime_seconds: Math.floor(Date.now() / 1000) % 86_400,
+            deploys_analyzed: deployCount,
+          };
+          const sig = `${statusPayload.state}:${deployCount}`;
+          if (sig !== lastStatusSig) {
+            lastStatusSig = sig;
+            controller.enqueue(
+              encoder.encode(
+                `event: status\ndata: ${JSON.stringify(statusPayload)}\n\n`
+              )
+            );
+          }
         } catch (err) {
           controller.enqueue(
             encoder.encode(

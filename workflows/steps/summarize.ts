@@ -41,8 +41,11 @@ export async function summarize(
     try {
       const raw = await redisGet(`deploys:${input.sha}`);
       if (raw) {
-        const existing = JSON.parse(raw);
-        await redisSet(`deploys:${input.sha}`, JSON.stringify({ ...existing, tldr }));
+        const existing = JSON.parse(raw) as Record<string, unknown>;
+        await redisSet(
+          `deploys:${input.sha}`,
+          JSON.stringify({ ...existing, tldr })
+        );
       }
     } catch (err) {
       console.warn("[summarize] KV update failed:", err);

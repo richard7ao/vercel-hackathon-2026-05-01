@@ -45,21 +45,38 @@ export async function getDemoToken(): Promise<string> {
   return "bridge-demo-2026";
 }
 
+async function postDemoJson(
+  url: string,
+  body: object,
+  signal: AbortSignal
+): Promise<Response> {
+  return fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${await getDemoToken()}`,
+    },
+    body: JSON.stringify(body),
+    signal,
+  });
+}
+
 async function pollKV(
   key: string,
   timeoutMs: number,
   signal: AbortSignal
 ): Promise<string | null> {
   const start = Date.now();
+  const bearer = `Bearer ${await getDemoToken()}`;
   while (Date.now() - start < timeoutMs) {
     if (signal.aborted) return null;
     try {
-      const res = await fetch(`/api/internal/kv?key=${encodeURIComponent(key)}`, {
-        headers: { "x-kv-secret": "bridge-kv-dev" },
-        signal,
-      });
+      const res = await fetch(
+        `/api/demo/kv?key=${encodeURIComponent(key)}`,
+        { headers: { Authorization: bearer }, signal }
+      );
       if (res.ok) {
-        const { value } = await res.json();
+        const { value } = (await res.json()) as { value: string | null };
         if (value !== null && value !== undefined) {
           return typeof value === "string" ? value : JSON.stringify(value);
         }
@@ -114,15 +131,11 @@ export async function runLiveRehearsals(
     addTrace(i, { ts: clockTs(), label: "POST /api/demo/trigger", status: "running" });
 
     try {
-      const trigRes = await fetch("/api/demo/trigger", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${await getDemoToken()}`,
-        },
-        body: JSON.stringify({ sha, score: 0.9 }),
-        signal,
-      });
+      const trigRes = await postDemoJson(
+        "/api/demo/trigger",
+        { sha, score: 0.9 },
+        signal
+      );
 
       if (!trigRes.ok) {
         patchLastTrace(i, { status: "error", detail: `${trigRes.status}` });
@@ -163,19 +176,15 @@ export async function runLiveRehearsals(
         status: "running",
       });
 
-      const resRes = await fetch("/api/demo/resume", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${await getDemoToken()}`,
-        },
-        body: JSON.stringify({
+      const resRes = await postDemoJson(
+        "/api/demo/resume",
+        {
           deploy_id: sha,
           action_type: action,
-          username: `rehearsal-ui`,
-        }),
-        signal,
-      });
+          username: "rehearsal-ui",
+        },
+        signal
+      );
 
       if (!resRes.ok) {
         patchLastTrace(i, { status: "error", detail: `${resRes.status}` });

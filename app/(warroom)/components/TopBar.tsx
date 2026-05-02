@@ -3,11 +3,17 @@
 import { useState, useEffect } from "react";
 import type { Deploy } from "../data";
 import { ModeToggle } from "./ModeToggle";
+import { DEFAULT_MONITORED_REPO } from "@/lib/monitored-repo";
 
-const REPO = process.env.NEXT_PUBLIC_MONITORED_REPO || "meridian/core-banking";
-/** GitHub `owner/name` used for webhooks / e2e (logical product is `meridian/core-banking`). */
+/** Display + ingest target: same GitHub repo webhooks and `gh` flows use (`owner/name`). */
+const REPO =
+  process.env.NEXT_PUBLIC_MONITORED_REPO ||
+  process.env.NEXT_PUBLIC_DEMO_GITHUB_REPO ||
+  DEFAULT_MONITORED_REPO;
 const GH_DEMO_REPO =
-  process.env.NEXT_PUBLIC_DEMO_GITHUB_REPO || "richard7ao/meridian-core-banking";
+  process.env.NEXT_PUBLIC_DEMO_GITHUB_REPO ||
+  process.env.NEXT_PUBLIC_MONITORED_REPO ||
+  DEFAULT_MONITORED_REPO;
 
 type WorkflowInfo = {
   id: string;
@@ -31,8 +37,9 @@ export function TopBar({
     const i = setInterval(() => setT(new Date()), 1000);
     return () => clearInterval(i);
   }, []);
-  const utc = t.toISOString().slice(11, 19);
-  const date = t.toISOString().slice(0, 10);
+  const iso = t.toISOString();
+  const utc = iso.slice(11, 19);
+  const date = iso.slice(0, 10);
 
   return (
     <div className="topbar">
@@ -41,14 +48,27 @@ export function TopBar({
           BRIDGE<span className="slash">//</span>
           <span className="sub">PRODUCTION WAR ROOM</span>
         </span>
-        <span className="crumb" title="Logical product name (MONITORED_REPO)">
+        <span
+          className="crumb"
+          title="Monitored GitHub repo (MONITORED_REPO / NEXT_PUBLIC_MONITORED_REPO)"
+        >
           REPO <b>{REPO}</b>
         </span>
         <span
           className="crumb"
-          title="GitHub repository Bridge watches via webhook — clone path often ../meridian-core-banking"
+          title="GitHub URL — webhook push events from this repository"
         >
-          GH <b>{GH_DEMO_REPO}</b>
+          GH{" "}
+          <b>
+            <a
+              href={`https://github.com/${GH_DEMO_REPO}`}
+              target="_blank"
+              rel="noreferrer"
+              className="path"
+            >
+              {GH_DEMO_REPO}
+            </a>
+          </b>
         </span>
         <span className="crumb">
           BRANCH <b>main</b>

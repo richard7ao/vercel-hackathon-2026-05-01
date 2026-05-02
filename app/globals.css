@@ -779,7 +779,7 @@ html, body {
   flex-wrap: wrap;
   justify-content: flex-end;
   max-width: min(520px, calc(100vw - 28px));
-  z-index: 100;
+  z-index: 103;
 }
 
 /* Board rehearsal — slim strip; dashboard (grid) stays visible above */
@@ -788,7 +788,7 @@ html, body {
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 96;
+  z-index: 102;
   background: var(--panel);
   border-top: 1px solid var(--line-1);
   font-family: var(--mono);
