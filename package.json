@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@octokit/rest": "^22.0.1",
     "@slack/web-api": "^7.15.1",
     "@workflow/ai": "^4.1.2",
     "ai": "^6.0.174",
