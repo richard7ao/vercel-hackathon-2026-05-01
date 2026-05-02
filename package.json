@@ -14,7 +14,7 @@
     "@octokit/rest": "^22.0.1",
     "@workflow/ai": "^4.1.2",
     "ai": "^6.0.174",
-    "discord.js": "^14.26.4",
+
     "dotenv": "^17.4.2",
     "next": "16.2.4",
     "octokit": "^5.0.5",

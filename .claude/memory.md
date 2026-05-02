@@ -22,6 +22,7 @@
 - [2026-05-02] **Stage count: 83**.
 - [2026-05-02] AI Gateway unreachable from local machine — mock fallback in summarize.ts, tracked in unresolved.md
 - [2026-05-02] **Switched T5 from Slack to Discord** — user doesn't have Slack enterprise, Discord bot is free and simpler. All Slack references in T5 stages become Discord equivalents. Core WDK signal/wait pattern unchanged.
+- [2026-05-02] **T6.7.1 adversarial review**: 5 issues fixed (dead discord.js dep, broken parseLLMVerdict refs in smoke harness, misleading header, decorative DurableAgent investigators, misleading chaos drill README claim). 4 deferred: `using` vs `const` hook (TS5.2 dep), summarize.ts generateText (out of T1 scope), empty behavioral/temporal signals (pre-existing), webhook not triggering workflow (by design — WDK runtime).
 
 ## Patterns
 

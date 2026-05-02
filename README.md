@@ -238,7 +238,7 @@ This is the core of the submission. The investigation pipeline is a tree of dura
 - **The synthesizer** uses a `DurableAgent` to collapse findings into a verdict, posts it to Discord with action buttons, then **pauses the workflow** using `createHook` from the WDK.
 - **The workflow stays paused** — surviving redeploys, cold starts, and server restarts — until a human clicks a button in Discord. The interaction webhook calls `resumeHook(token, payload)`, and the workflow resumes.
 
-The **chaos drill** (`scripts/chaos-drill.sh`) proves this: it kills the dev server mid-investigation, restarts it, and verifies the workflow picks up where it left off.
+The **chaos drill** (`scripts/chaos-drill.sh`) verifies KV state persistence across process kills: it writes workflow state, SIGKILL-terminates the dev server, restarts, and confirms pause_state and verdict records survive the crash. Full WDK workflow-level durability (createHook surviving function instance death) is a WDK runtime guarantee exercised on the production Vercel deployment.
 
 ## Verification
 
