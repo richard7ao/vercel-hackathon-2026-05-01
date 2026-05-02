@@ -309,26 +309,30 @@
       }
     },
     "T5": {
-      "status": "pending",
+      "status": "in_progress",
       "steps": {
         "T5.1": {
-          "status": "pending",
+          "status": "in_progress",
           "stages": {
             "T5.1.1": {
               "status": "pending",
-              "completed_at": null
+              "completed_at": null,
+              "note": "Discord credentials needed from user"
             },
             "T5.1.2": {
-              "status": "pending",
-              "completed_at": null
+              "status": "complete",
+              "completed_at": "2026-05-02T08:45:00.000Z",
+              "note": "lib/discord.ts — adapted from Slack to Discord REST API"
             },
             "T5.1.3": {
-              "status": "pending",
-              "completed_at": null
+              "status": "complete",
+              "completed_at": "2026-05-02T08:50:00.000Z",
+              "note": "watchdog posts Discord embed+buttons on critical verdict"
             },
             "T5.1.4": {
-              "status": "pending",
-              "completed_at": null
+              "status": "complete",
+              "completed_at": "2026-05-02T08:55:00.000Z",
+              "note": "app/api/discord/interactions/route.ts — interaction webhook"
             },
             "T5.1.5": {
               "status": "pending",

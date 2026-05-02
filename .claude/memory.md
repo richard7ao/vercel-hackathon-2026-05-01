@@ -9,45 +9,45 @@
 - [2026-05-01] Demo-mode vs production-mode for trace/runtime stub investigators — both code paths exist, controlled by `BRIDGE_MODE` env (default `production` shows N/A; `demo` runs synthesized streams matching war-room/app.jsx). Reason: war-room design shows all 5 agents live; raw_prompt §4c says stub trace/runtime. Resolved by implementing both.
 - [2026-05-01] Top bar `REPO` crumb is parameterized via `MONITORED_REPO` env (= `meridian/core-banking` in our setup); the war-room/ design's hardcoded `acme/control-plane` is the design fallback only.
 - [2026-05-01] Tier 3 verify commands run via `npx tsx --input-type=module -e "..."` (not raw `node`) for any TypeScript-source imports. `tsx` added as dev dep in T0.2.1. Reason: Node cannot import `.ts`/`.tsx` directly without a loader; pre-compiling per stage is wasteful.
-- [2026-05-01] Skills folder disposition: existing `skills/{identify-the-players,analyze-existing-solutions,pitch-solutions}` are NHS-flavored hackathon strategy skills unrelated to Bridge implementation. Left in place; not invoked by Bridge code paths. `skills/brainstorming/` was added in this session as a local mirror of the global plugin.
+- [2026-05-01] Skills folder disposition: existing `skills/{identify-the-players,analyze-existing-solutions,pitch-solutions}` are NHS-flavoured hackathon strategy skills unrelated to Bridge implementation. Left in place; not invoked by Bridge code paths. `skills/brainstorming/` was added in this session as a local mirror of the global plugin.
 - [2026-05-01] Claude design URL `https://api.anthropic.com/v1/design/h/Ry1KGi5XlJWoDA1GfmhpHw` is gated (POST-only API endpoint + Cloudflare auth on claude.ai mirror). Cannot be fetched by tools. The `war-room/` folder bundle is the local mirror and the implementation source of truth. URL embedded in spec for human reviewers (judges/teammates).
-- [2026-05-01] Verify-block rigor bar (§"Rigor bar" in spec) is mandatory for every behavior-bearing stage: tier3 ≥ 5 cases (happy + negative + ≥3 edge + ≥1 adversarial + config), tier4 must do at least one of (cross-stage integration / real external dep / E2E against running stack / failure-mode / idempotence). Tier4 may NOT duplicate tier3 with extra cases. **T2.2.1 is the canonical exemplar.** Other behavior stages must match that bar at implementation time.
+- [2026-05-01] Verify-block rigor bar (§"Rigor bar" in spec) is mandatory for every behaviour-bearing stage: tier3 ≥ 5 cases (happy + negative + ≥3 edge + ≥1 adversarial + config), tier4 must do at least one of (cross-stage integration / real external dep / E2E against running stack / failure-mode / idempotence). Tier4 may NOT duplicate tier3 with extra cases. **T2.2.1 is the canonical exemplar.** Other behaviour stages must match that bar at implementation time.
 - [2026-05-01] Cinematic moments specced in T8.1.5–7: WORKFLOW SUSPENDED overlay + resume green pulse + PAGE pulse during the Slack pause; animated risk-score arc + smooth token tick on agent cards; live budget tick-down + state-flip flashes + investigator scan-line shimmer. Reason: the durability moment must be legible without narration — visuals do the work.
 - [2026-05-01] T8.1.10 (was T8.1.8 before judge-mode-UX renumber) includes a chaos drill (kill `next dev` mid-investigation, restart, verify workflow resumes from KV). This is the actual proof of the WDK durability claim. The chaos drill must succeed in rehearsal — it's the spec's real test for "the WDK pitch is true".
-
-- [2026-05-02] **Demo mode is now the production default**, not opt-in. raw_prompt assumed live demo as the primary surface; the hackathon submission flow may pick winners from submissions alone (no live demos) per the team chat. Result: deployed URL must sell the project on first paint. Default `mode='demo'` in T3.1.2; new T0.3.4 adds an autoplay loop with countdown chip; new T8.1.5 adds a DEMO/LIVE toggle in the TopBar with localStorage + URL-param persistence; new T8.1.6 adds a first-paint legend, ARCH diagram modal, and VIDEO/GITHUB chips.
-
-- [2026-05-02] **README.md is the secondary primary surface** (after the deployed URL). Bumped T10.1.2 from ≥500 words to 800–1200 words with hero screenshot, embedded video link, ASCII architecture diagram, WDK story up top, reproducibility steps. Verify block enforces all of these.
-
-- [2026-05-02] **T9 (video) reframed from "insurance" to "primary deliverable"** and runs in parallel with T8 polish. MVP cut after T5 (Slack pause) works; final cut after T8.1.10 rehearsals.
-
-- [2026-05-02] **T10.1.3 is Notion form only** — Vercel global pool dropped because it requires v0 (we use `create-next-app`, not v0). Per team chat: "if you don't use v0 i'm not fussed but Vercel might not accept the submission into their global pool".
-
-- [2026-05-02] **Honest sim-suffix** in DEMO mode: data rows (deploy entries, agent findings, threats) get a small `· sim` superscript so a judge can't accidentally confuse simulation data with real activity. Hidden in LIVE mode. Prevents the credibility hit of "wait, was that all fake?".
-
-- [2026-05-02] **Renumbered T8.1.5–8 → T8.1.7–10** to slot in the new mode-toggle (T8.1.5) and legend+ARCH+nav (T8.1.6) before the cinematic stages. T9.1.1 Requires updated to T8.1.10. T5.1.4 / T5.1.7 / T10.1.2 prose references updated.
-
-- [2026-05-02] **Stage count: 83** (was 80 before this iteration). T0=13 · T1=5 · T2=18 · T3=3 · T4=8 · T5=7 · T6=9 · T7=3 · T8=10 · T9=3 · T10=4.
+- [2026-05-02] **Demo mode is now the production default**, not opt-in.
+- [2026-05-02] **README.md is the secondary primary surface** (after the deployed URL). Bumped T10.1.2 from ≥500 words to 800–1200 words.
+- [2026-05-02] **T9 (video) reframed from "insurance" to "primary deliverable"** and runs in parallel with T8 polish.
+- [2026-05-02] **T10.1.3 is Notion form only** — Vercel global pool dropped.
+- [2026-05-02] **Honest sim-suffix** in DEMO mode.
+- [2026-05-02] **Stage count: 83**.
+- [2026-05-02] AI Gateway unreachable from local machine — mock fallback in summarize.ts, tracked in unresolved.md
+- [2026-05-02] **Switched T5 from Slack to Discord** — user doesn't have Slack enterprise, Discord bot is free and simpler. All Slack references in T5 stages become Discord equivalents. Core WDK signal/wait pattern unchanged.
 
 ## Patterns
 
-- [2026-05-01] SSE event types live in `lib/sse-events.ts` as a discriminated union on `type`. Type guards (`isStatusEvent`, `isDeployEvent`, etc.) and `parseSSEEvent(line)` helper give consumers a single dispatch surface. The `useDeploysSSE` hook (T3.1.2) is the only swap point between mock and live data — toggling `mode='demo'|'live'` switches the entire app.
-- [2026-05-01] KV key conventions documented at the top of `lib/db.ts`: `deploys:{sha}` (full record), `deploys:raw:{sha}` (webhook payload), `verdicts:{sha}`, `threats:{id}`, `history:author:{login}` (set of touched dirs), `history:file:{path}`, `history:hour:{path}` (24-elem array), `history:cochange:{a}:{b}`, `investigator:{deploy_id}:{agent}`.
-- [2026-05-01] Tier 4 server lifecycle: each stage owns its own `next dev -p 3030` (background, with port-ready loop, capped 30s wait, `pkill -f 'next dev.*3030'` cleanup). Cleanup uses `|| true` after capturing the test exit code into `$ec` so cleanup failure doesn't mask test result.
-- [2026-05-01] Investigators are separate `DurableAgent` sub-workflows under `workflows/investigators/*.ts`. Watchdog dispatches them in parallel via `Promise.all` only when score ≥ 0.6. WDK handles per-investigator durability and retries.
-- [2026-05-01] Slack pause/resume uses WDK signal/wait — the workflow awaits `slack:ack:{deploy_id}` signal name; the `app/api/slack/interactive/route.ts` endpoint sends the signal via `sendAck(deploy_id, action_type, user)`.
+- [2026-05-01] SSE event types live in `lib/sse-events.ts` as a discriminated union on `type`.
+- [2026-05-01] KV key conventions documented at the top of `lib/db.ts`.
+- [2026-05-01] Tier 4 server lifecycle: each stage owns its own `next dev -p 3030`.
+- [2026-05-01] Investigators are separate `DurableAgent` sub-workflows under `workflows/investigators/*.ts`.
+- [2026-05-01] Pause/resume uses WDK signal/wait — workflow awaits signal; interaction endpoint sends the signal.
+- [2026-05-02] CJS/ESM interop for tsx: `const mod = await import(...); const { x } = mod.default || mod;`
+- [2026-05-02] KV double-serialization: kv.set already JSON.stringifies, don't wrap values in JSON.stringify
+- [2026-05-02] Dotenv must load before any module that reads env vars
 
 ## Gotchas
 
-- [2026-05-01] `war-room/project/` uses CDN React 18.3.1 + Babel standalone — the production port to Next.js 15 must replace `<script type="text/babel">` blocks with real `.tsx` imports under `app/(warroom)/`. Animation timing constants and CSS tokens carry over verbatim; component logic is mostly mechanical.
-- [2026-05-01] Node binary is at `/opt/homebrew/bin/node` (Homebrew). The shell exposes a `node()` function that calls `_load_nvm` first; in non-interactive contexts (some test runners, CI) the function is unavailable and absolute path or login-shell invocation is required.
-- [2026-05-01] `create-next-app` refuses to scaffold into a non-empty directory. Workaround for T0.1.1: scaffold into a temp subdirectory then move contents up (or use `npx create-next-app@latest .` with the `--use-npm` flag and accept overwrite prompts). The spec leaves the exact mechanic up to the executor; the verify block checks the end state.
-- [2026-05-01] Vercel KV REST API requires `Authorization: Bearer <KV_REST_API_TOKEN>` header on every call. The spec assumes `vercel env pull .env.local` has populated `KV_URL`, `KV_REST_API_URL`, `KV_REST_API_TOKEN`, `KV_REST_API_READ_ONLY_TOKEN`.
-- [2026-05-01] AI Gateway base URL is `https://gateway.ai.vercel.app/v1/` — model strings like `anthropic/claude-sonnet-4-6` are passed as the `model` field, not as part of the URL. Authorization header is `Bearer <AI_GATEWAY_API_KEY>`.
+- [2026-05-01] `war-room/project/` uses CDN React 18.3.1 + Babel standalone — production port replaces with real .tsx imports.
+- [2026-05-01] Node binary at `/opt/homebrew/bin/node` — needs `bash -lc` for nvm.
+- [2026-05-01] `create-next-app` refuses non-empty directory.
+- [2026-05-01] AI Gateway base URL is `https://gateway.ai.vercel.app/v1/`.
+- [2026-05-02] EventSource.onmessage only catches unnamed events; named SSE events need addEventListener per type
+- [2026-05-02] Tailwind v4 uses CSS-based config with `@theme inline` directive
+- [2026-05-02] AI SDK v6 uses `maxOutputTokens` not `maxTokens`
+- [2026-05-02] kv.get already parses JSON — don't wrap result in JSON.parse
 
 ## Open Questions
 
-- [2026-05-01] WDK signal/wait primitive name varies across WDK versions (`waitForSignal`, `awaitSignal`, `signal()`). T5.1.4 uses a tier3 grep for any of these names; the actual implementation must match the installed WDK version. If WDK has renamed the primitive in the version installed at T0.1.2, update the spec inline at T5.1.4 implementation time.
-- [2026-05-01] Whether to keep the existing `skills/{identify-the-players,analyze-existing-solutions,pitch-solutions}` folder untouched, archive it, or delete it. Currently left in place per user direction; revisit if the folder grows or causes confusion.
-- [2026-05-01] T7 (System-area heatmap) is marked required in the linear-strict spec. If time pressure forces a skip, append a `context_exhaustion` post-mortem with `resumption_hint` describing whether to revisit T7 post-submission. The war-room/ design ships with the files × hours heatmap which can stand in for the demo if T7 is cut.
-- [2026-05-01] How the live demo's "RUN DEMO" button actually triggers a real GitHub push from the war room. Current spec (T8.1.1) calls `gh api repos/.../merges` from a server-side route (`app/api/demo/run/route.ts`) gated by `DEMO_RESET_TOKEN`. Confirm GitHub PAT scopes and Vercel function permissions support this before the live demo.
+- [2026-05-01] WDK signal/wait primitive name varies across WDK versions.
+- [2026-05-01] Whether to keep existing `skills/` folder untouched.
+- [2026-05-01] T7 (heatmap) — if time pressure forces a skip, append context_exhaustion post-mortem.
+- [2026-05-02] AI Gateway connectivity — ECONNRESET from local machine, works on Vercel?

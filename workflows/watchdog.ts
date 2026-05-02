@@ -9,6 +9,8 @@ import { dependencyInvestigator } from "./investigators/dependency";
 import { diffInvestigator } from "./investigators/diff";
 import { traceInvestigator } from "./investigators/trace";
 import { runtimeInvestigator } from "./investigators/runtime";
+import { synthesize } from "./synthesizer";
+import { buildPageEmbed, postEmbed } from "../lib/discord";
 import type { InvestigatorInput, InvestigatorResult } from "./investigators/_base";
 
 type WatchdogInput = {
@@ -106,5 +108,39 @@ export async function watchdog(input: WatchdogInput): Promise<WatchdogResult> {
   };
   const investigators = await dispatchInvestigators(invInput, score);
 
+  if (score >= DISPATCH_THRESHOLD && investigators.length > 0) {
+    const findings = investigators
+      .filter((i) => i.finding)
+      .map((i) => ({
+        agent: i.agent,
+        severity: i.finding!.severity,
+        summary: i.finding!.summary,
+      }));
+
+    const verdict = await synthesize({
+      deploy_id: sha,
+      findings,
+      signals: signals as Record<string, unknown>,
+      score,
+    });
+
+    if (verdict.level === "critical" || verdict.level === "investigate") {
+      const channelId = process.env.DISCORD_CHANNEL_ID;
+      if (channelId) {
+        try {
+          const { embed, row } = buildPageEmbed({
+            deploy_id: sha,
+            verdict,
+          });
+          await postEmbed(channelId, [embed], [row]);
+        } catch {
+          // Discord unavailable — continue without page
+        }
+      }
+    }
+  }
+
   return { sha, score, verdict_bucket, signals, tldr, investigators };
 }
+
+export { buildPageEmbed };
