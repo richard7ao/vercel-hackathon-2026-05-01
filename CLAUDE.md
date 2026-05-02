@@ -6,11 +6,20 @@
 
 ## Protocol overrides (override the global manual)
 
-### Tier 2 (Simplify) is removed from per-stage verify
+### Tier 2 (Simplify) is removed from per-stage verify, and gated on diff size at commit time
 
-Global CLAUDE.md §2 says "Tier 2 (Simplify) is NEVER skipped" per stage. **For this project, Tier 2 does not run per stage.** Reason: 83 stages × `code-simplifier:code-simplifier` agent dispatch = enormous compute and context budget for a hackathon-pace timeline.
+Global CLAUDE.md §2 says "Tier 2 (Simplify) is NEVER skipped" per stage. **For this project, Tier 2 does not run per stage**, AND it does not run on every commit either. Reason: 83 stages × `code-simplifier:code-simplifier` agent dispatch = enormous compute and context budget for a hackathon-pace timeline; small commits don't have enough surface to benefit from simplification.
 
-**Replacement rule:** the `code-simplifier:code-simplifier` agent runs **once before each commit** (per global Task Completion Protocol §3 Step 6), on all files changed since the last commit — not per stage. This is sufficient simplification coverage at ~5% of the cost.
+**Replacement rule (two-condition gate):**
+
+1. **Per-stage:** never run the simplifier.
+2. **At commit time:** run the simplifier **only if** the staged diff is **> 200 lines** (insertions + deletions, excluding lockfiles and binary files). For commits ≤ 200 lines, skip simplification entirely. For commits > 200 lines, dispatch `code-simplifier:code-simplifier` on all changed files since the last commit, apply suggested improvements, re-run Tier 1 (build) to confirm, then commit.
+
+**Quick check before commit:**
+```bash
+git diff --cached --shortstat -- ':!*.lock' ':!package-lock.json' ':!*.tsbuildinfo'
+# if (insertions + deletions) > 200 → run simplifier; else skip
+```
 
 The `# tier2_simplify` blocks already authored in the spec are **informational only** — they document which files would be in scope at simplify-time. They are not executed during stage verification. Per-stage verification is now: **Tier 1 (Build) → Tier 3 (Unit) → Tier 4 (Integration)**.
 
