@@ -10,6 +10,7 @@ import {
   type DetectResult,
   type DepDetectResult,
 } from "../../lib/signals/structural";
+import { detectTemporal } from "../../lib/signals/temporal";
 import { CRITICAL_PATHS } from "../../lib/critical-paths";
 import type { IngestResult } from "./ingest";
 
@@ -56,6 +57,8 @@ export async function extractSignals(
     if (ne.matched) new_endpoint.push({ ...ne, file: fp });
   }
 
+  const temporal = await detectTemporal({ pushed_at: ingest.pushed_at });
+
   return {
     structural: {
       external_fetch,
@@ -66,6 +69,11 @@ export async function extractSignals(
       new_endpoint,
     },
     behavioral: {},
-    temporal: {},
+    temporal: {
+      off_hours: temporal.off_hours,
+      weekend: temporal.weekend,
+      rapid_succession: temporal.rapid_succession,
+      severity: temporal.severity,
+    },
   };
 }

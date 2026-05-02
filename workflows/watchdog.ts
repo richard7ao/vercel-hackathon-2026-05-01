@@ -12,6 +12,7 @@ import { traceInvestigator } from "./investigators/trace";
 import { runtimeInvestigator } from "./investigators/runtime";
 import { synthesize } from "./synthesizer";
 import { buildPageEmbed } from "../lib/discord";
+import { BRIDGE_REHEARSAL_MARKER } from "../lib/git-rehearsal";
 import { redisSet } from "../lib/db-redis";
 import { buildDeployRedisRecord } from "../lib/deploy-stream-shape";
 import { kvSet, kvGet, kvDel, postDiscordEmbed } from "./steps/kv-ops";
@@ -47,6 +48,13 @@ const DISPATCH_THRESHOLD = Math.max(
   0,
   Math.min(1, parseFloat(process.env.DISPATCH_THRESHOLD ?? "0.6"))
 );
+
+/** Git-backed board/trace rehearsal: canary patch is weak signal-only; floor score so hook + KV pause still run. */
+function isRehearsalCanaryIngest(ingest: { files: { patch?: string }[] }): boolean {
+  return ingest.files.some(
+    (f) => typeof f.patch === "string" && f.patch.includes(BRIDGE_REHEARSAL_MARKER)
+  );
+}
 
 async function dispatchInvestigators(
   input: InvestigatorInput,
@@ -210,6 +218,10 @@ export async function watchdog(input: WatchdogInput): Promise<WatchdogResult> {
     signals,
   });
 
+  const effectiveScore = isRehearsalCanaryIngest(ingestResult)
+    ? Math.max(score, 0.95)
+    : score;
+
   const { tldr } = await summarize({
     files: ingestResult.files,
     commit_message: ingestResult.commit_message,
@@ -222,21 +234,21 @@ export async function watchdog(input: WatchdogInput): Promise<WatchdogResult> {
     author: ingestResult.author,
     files: ingestResult.files,
   };
-  const investigators = await dispatchInvestigators(invInput, score);
+  const investigators = await dispatchInvestigators(invInput, effectiveScore);
 
   let ack: AckPayload | null = null;
-  if (score >= DISPATCH_THRESHOLD && investigators.length > 0) {
+  if (effectiveScore >= DISPATCH_THRESHOLD && investigators.length > 0) {
     ack = await synthesizeAndPage(
       sha,
       investigators,
       signals as Record<string, unknown>,
-      score
+      effectiveScore
     );
   }
 
   return {
     sha,
-    score,
+    score: effectiveScore,
     verdict_bucket,
     signals,
     tldr,
