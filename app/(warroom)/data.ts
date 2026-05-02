@@ -82,11 +82,11 @@ export const STATUS_LABELS: Record<StatusState, string> = {
 };
 
 export const AGENT_DEFS: AgentDef[] = [
-  { key: 'trace', name: 'TRACE', role: 'INSPECTOR · OTLP', idx: '01' },
-  { key: 'runtime', name: 'RUNTIME', role: 'INSPECTOR · METRICS', idx: '02' },
-  { key: 'history', name: 'HISTORY', role: 'INSPECTOR · GIT', idx: '03' },
-  { key: 'dependency', name: 'DEPENDENCY', role: 'INSPECTOR · GRAPH', idx: '04' },
-  { key: 'diff', name: 'DIFF', role: 'INSPECTOR · AST', idx: '05' },
+  { key: 'trace', name: 'TRACE', role: 'INSPECTOR AGENT · OTLP', idx: '01' },
+  { key: 'runtime', name: 'RUNTIME', role: 'INSPECTOR AGENT · METRICS', idx: '02' },
+  { key: 'history', name: 'HISTORY', role: 'INSPECTOR AGENT · GIT', idx: '03' },
+  { key: 'dependency', name: 'DEPENDENCY', role: 'INSPECTOR AGENT · GRAPH', idx: '04' },
+  { key: 'diff', name: 'DIFF', role: 'INSPECTOR AGENT · AST', idx: '05' },
 ];
 
 export const HEATMAP_FILES = [

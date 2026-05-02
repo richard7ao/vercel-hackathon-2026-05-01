@@ -5,7 +5,19 @@ import type { Deploy } from "../data";
 
 const REPO = process.env.NEXT_PUBLIC_MONITORED_REPO || "meridian/core-banking";
 
-export function TopBar({ activeDeploy }: { activeDeploy: Deploy | null }) {
+type WorkflowInfo = {
+  id: string;
+  resumed: number;
+  runtime_minutes: number;
+};
+
+export function TopBar({
+  activeDeploy,
+  workflow,
+}: {
+  activeDeploy: Deploy | null;
+  workflow?: WorkflowInfo | null;
+}) {
   const [t, setT] = useState(new Date());
   useEffect(() => {
     const i = setInterval(() => setT(new Date()), 1000);
@@ -43,8 +55,15 @@ export function TopBar({ activeDeploy }: { activeDeploy: Deploy | null }) {
             <b className="dim">&mdash; no active investigation &mdash;</b>
           </span>
         )}
+        {workflow && (
+          <span className="crumb workflow-line">
+            WORKFLOW <b>{workflow.id}</b> &middot; resumed{" "}
+            {workflow.resumed}x &middot; {workflow.runtime_minutes.toFixed(1)}m
+            runtime
+          </span>
+        )}
         <span className="live-badge">
-          <span className="live-dot" />
+          <span className="live-dot pulse" />
           LIVE
         </span>
         <span className="clock tab-num">

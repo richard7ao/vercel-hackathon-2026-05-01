@@ -652,8 +652,10 @@ html, body {
 /* ========== Verdict modal ========== */
 .verdict {
   position: fixed;
-  right: 24px; top: 160px;
+  right: 24px; bottom: 80px;
   width: 460px;
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
   background: var(--bg-1);
   border: 1px solid var(--red-dim);
   z-index: 50;
