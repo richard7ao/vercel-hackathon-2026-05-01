@@ -109,7 +109,7 @@ From `war-room/project/data.js` `authors` array, plus narrative tenure/role per 
 Every stage has 4 tiers. Targets <30s wall time per tier.
 
 - **Tier 1 (Build):** Real toolchain — `npx tsc --noEmit`, `next build`, `actionlint`, `node --check`. Never `test -f`. Never grep for strings.
-- **Tier 2 (Simplify):** Dispatch `code-simplifier:code-simplifier` agent on changed files. Mandatory; never skipped, including config-only and docs-only stages.
+- **Tier 2 (Simplify):** ~~Dispatch `code-simplifier:code-simplifier` agent on changed files per stage.~~ **REMOVED FROM PER-STAGE VERIFY** per project CLAUDE.md override (83 stages × simplifier-dispatch is too expensive for a hackathon timeline). The simplifier runs **once before each commit** on all files changed since the last commit, per global Task Completion Protocol §3 Step 6. The `# tier2_simplify` blocks remaining in the stages below are **informational** — they document files that would be in scope at simplify-time, but they are not executed during stage verification. Per-stage flow is now: **Tier 1 → Tier 3 → Tier 4**.
 - **Tier 3 (Unit):** Inline script that imports the module and asserts on output. NO grep-for-string anti-patterns. For React: SSR with `react-dom/server.renderToString` + assert on output substring. **For TypeScript sources** (`.ts`/`.tsx`), commands run via `npx tsx --input-type=module -e "..."` (not raw `node`), since Node cannot import TypeScript directly. `tsx` is added as a dev dep in T0.2.1.
 - **Tier 4 (Integration):** Spin up `next dev` on PORT=3030 (background), curl real endpoint, assert on response, kill server. For workflows: invoke function, assert on KV side effects + SSE stream contents.
 
@@ -697,11 +697,15 @@ TARGET=$(cat .demo-target-url | sed -E 's|^https://github.com/||;s|/$||'); gh ap
 TARGET=$(cat .demo-target-url | sed -E 's|^https://github.com/||;s|/$||'); HOOK_ID=$(gh api repos/$TARGET/hooks --jq '.[] | select(.config.url | contains("/api/webhooks/github")) | .id' | head -1); gh api repos/$TARGET/hooks/$HOOK_ID/deliveries --jq '.[0].guid' | grep -E '^[a-f0-9-]+$' > /dev/null
 ```
 
-### T1.2 — KV layer
+### T1.2 — Storage layer (Redis)
 
-#### T1.2.1 — `lib/db.ts` with helpers + key conventions
+**Storage backend decision:** This project uses **Redis** (via the `redis` npm package), not Vercel KV REST. Connection via `REDIS_URL` env (set during T0.2.2 via Vercel Marketplace's Redis offering / Upstash / similar). The `lib/db.ts` abstraction exposes a `kv.*` API matching what every downstream verify block already uses (`kv.set / kv.get / kv.list / kv.del`) — same names, redis client underneath.
 
-**Description:** Wrap the Vercel KV REST client. Export `kv.set`, `kv.get`, `kv.list`, `kv.del`, plus typed wrappers `getDeploy(sha)`, `setDeploy(sha, record)`, `listDeploys(limit)`, `getThreat(id)`, etc. Document the key schema in a top-of-file comment: `deploys:{sha}` (full record), `deploys:raw:{sha}` (webhook payload), `verdicts:{sha}`, `threats:{id}`, `history:author:{login}`, `history:file:{path}`, `history:cochange:{a}:{b}`, `history:hour:{path}`.
+#### T1.2.1 — `lib/db.ts` with redis client + helpers + key conventions
+
+**Description:** Wrap the `redis` npm client behind a `kv` abstraction. Export `kv.set(key, value)`, `kv.get(key)`, `kv.list(prefix)` (uses `SCAN` with `MATCH prefix*` to enumerate keys; never `KEYS` which blocks production redis), `kv.del(key)`, plus typed wrappers `getDeploy(sha)`, `setDeploy(sha, record)`, `listDeploys(limit)`, `getThreat(id)`, etc. Connection is lazy + memoized at module load — single `createClient` per process, reused across calls. Values are JSON-serialized on write, parsed on read. Document the key schema in a top-of-file comment: `deploys:{sha}` (full record), `deploys:raw:{sha}` (webhook payload), `verdicts:{sha}`, `threats:{id}`, `history:author:{login}`, `history:file:{path}`, `history:cochange:{a}:{b}`, `history:hour:{path}`, `pause_state:{deploy_id}`, `investigator:{deploy_id}:{agent}`, `workflow_cost:{deploy_id}`.
+
+`kv.list(prefix)` returns plain string[]. The `value` argument to `kv.set` is JSON-serialized (objects, arrays, numbers, strings all OK); `kv.get` returns the parsed value (or `null`).
 
 **Requires:** T0.2.2
 
@@ -719,12 +723,48 @@ echo "Dispatch code-simplifier:code-simplifier on: lib/db.ts"
 
 ```bash
 # tier3_unit
-npx tsx --input-type=module -e "import('./lib/db.ts').then(async ({ kv, setDeploy, getDeploy }) => { require('dotenv').config({path:'.env.local'}); const sha = 't_' + Date.now().toString(36); const rec = { sha, score: 0.5, tldr: 'unit test record' }; await setDeploy(sha, rec); const got = await getDeploy(sha); if (got?.score !== 0.5) { console.error('roundtrip failed', got); process.exit(1); } await kv.del('deploys:' + sha); console.log('OK'); })"
+npx tsx --input-type=module -e "
+import { kv, setDeploy, getDeploy } from './lib/db.ts';
+import 'dotenv/config';
+// Roundtrip
+const sha = 't_' + Date.now().toString(36);
+await setDeploy(sha, { sha, score: 0.5, tldr: 'unit test record' });
+const got = await getDeploy(sha);
+if (got?.score !== 0.5) { console.error('roundtrip failed', got); process.exit(1); }
+// Object value preserved
+await kv.set('test:obj:' + sha, { a: 1, nested: { b: [1, 2, 3] } });
+const obj = await kv.get('test:obj:' + sha);
+if (obj?.nested?.b?.[2] !== 3) { console.error('object roundtrip failed', obj); process.exit(1); }
+// list with prefix
+await kv.set('test:list:' + sha + ':a', 1);
+await kv.set('test:list:' + sha + ':b', 2);
+const list = await kv.list('test:list:' + sha + ':');
+if (list.length !== 2) { console.error('expected 2 keys, got', list); process.exit(1); }
+// del
+await kv.del('deploys:' + sha);
+await kv.del('test:obj:' + sha);
+await kv.del('test:list:' + sha + ':a');
+await kv.del('test:list:' + sha + ':b');
+const after = await getDeploy(sha);
+if (after !== null) { console.error('del did not remove', after); process.exit(1); }
+console.log('OK roundtrip + object + list-prefix + del');
+"
 ```
 
 ```bash
 # tier4_integration
-npx tsx --input-type=module -e "import('./lib/db.ts').then(async ({ kv, listDeploys }) => { require('dotenv').config({path:'.env.local'}); const out = await listDeploys(5); if (!Array.isArray(out)) { console.error('listDeploys did not return array'); process.exit(1); } console.log('OK list len=' + out.length); })"
+npx tsx --input-type=module -e "
+import { kv, listDeploys } from './lib/db.ts';
+import 'dotenv/config';
+const out = await listDeploys(5);
+if (!Array.isArray(out)) { console.error('listDeploys did not return array'); process.exit(1); }
+// Connection re-use: 50 sequential ops should complete in <2s (single connection, not per-call connect)
+const t0 = Date.now();
+for (let i = 0; i < 50; i++) await kv.get('nonexistent:' + i);
+const elapsed = Date.now() - t0;
+if (elapsed > 2000) { console.error('50 reads took ' + elapsed + 'ms — likely reconnecting per call'); process.exit(1); }
+console.log('OK list len=' + out.length + ' · 50 reads in ' + elapsed + 'ms');
+"
 ```
 
 ### T1.3 — SSE endpoint

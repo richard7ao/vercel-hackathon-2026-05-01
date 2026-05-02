@@ -4,6 +4,18 @@
 
 ---
 
+## Protocol overrides (override the global manual)
+
+### Tier 2 (Simplify) is removed from per-stage verify
+
+Global CLAUDE.md §2 says "Tier 2 (Simplify) is NEVER skipped" per stage. **For this project, Tier 2 does not run per stage.** Reason: 83 stages × `code-simplifier:code-simplifier` agent dispatch = enormous compute and context budget for a hackathon-pace timeline.
+
+**Replacement rule:** the `code-simplifier:code-simplifier` agent runs **once before each commit** (per global Task Completion Protocol §3 Step 6), on all files changed since the last commit — not per stage. This is sufficient simplification coverage at ~5% of the cost.
+
+The `# tier2_simplify` blocks already authored in the spec are **informational only** — they document which files would be in scope at simplify-time. They are not executed during stage verification. Per-stage verification is now: **Tier 1 (Build) → Tier 3 (Unit) → Tier 4 (Integration)**.
+
+---
+
 ## Project-Specific Constraints (ABSOLUTE — no exceptions)
 
 | Rule | Reason |
