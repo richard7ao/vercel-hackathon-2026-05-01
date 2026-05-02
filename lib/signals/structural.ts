@@ -51,6 +51,39 @@ function isComment(line: string): boolean {
 
 const AUTH_KEYWORDS = ["auth", "session", "token", "permission", "middleware"];
 
+const SECRET_PATTERNS = [
+  /AKIA[0-9A-Z]{16}/,
+  /[A-Za-z0-9/+=]{40}/,
+  /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/,
+  /(api[_-]?key|secret)\s*[:=]\s*['"][A-Za-z0-9]{20,}['"]/i,
+];
+
+export function detectSecretShapes(file: FileInput): DetectResult {
+  const patch = file.patch;
+  if (!patch) return { matched: false, severity: 0, evidence: [] };
+
+  const lines = patch.split("\n");
+  const evidence: Evidence[] = [];
+  let addedLineIndex = 0;
+
+  for (const raw of lines) {
+    if (!raw.startsWith("+")) continue;
+    addedLineIndex++;
+    const code = raw.slice(1).trim();
+    if (isComment(code)) continue;
+
+    for (const pattern of SECRET_PATTERNS) {
+      if (pattern.test(code)) {
+        evidence.push({ url: pattern.source, line: addedLineIndex });
+        break;
+      }
+    }
+  }
+
+  if (evidence.length === 0) return { matched: false, severity: 0, evidence: [] };
+  return { matched: true, severity: 0.95, evidence };
+}
+
 export function detectAuthPath(file: FileInput): DetectResult {
   const path = file.path ?? "";
   if (!path) return { matched: false, severity: 0, evidence: [] };
