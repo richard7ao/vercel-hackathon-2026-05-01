@@ -120,6 +120,31 @@ export function detectAuthPath(file: FileInput): DetectResult {
   return { matched: true, severity, evidence: [] };
 }
 
+type DepEvidence = { name: string; version: string };
+
+export type DepDetectResult = {
+  matched: boolean;
+  severity: number;
+  evidence: DepEvidence[];
+};
+
+const DEP_LINE = /^\+\s*"([^"]+)"\s*:\s*"([^"]+)"/;
+
+export function detectNewDependency(file: FileInput): DepDetectResult {
+  if (!file.path?.endsWith("package.json") || !file.patch) {
+    return { matched: false, severity: 0, evidence: [] };
+  }
+
+  const evidence: DepEvidence[] = [];
+  for (const raw of file.patch.split("\n")) {
+    const m = raw.match(DEP_LINE);
+    if (m) evidence.push({ name: m[1], version: m[2] });
+  }
+
+  if (evidence.length === 0) return { matched: false, severity: 0, evidence: [] };
+  return { matched: true, severity: 0.5 + Math.min(evidence.length * 0.1, 0.4), evidence };
+}
+
 export function detectExternalFetch(
   file: FileInput,
   allowlist?: string[]
