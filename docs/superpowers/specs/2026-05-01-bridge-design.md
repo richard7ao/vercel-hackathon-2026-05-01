@@ -3888,7 +3888,7 @@ gh repo view --json visibility --jq '.visibility' | grep -q 'PUBLIC'
 
 **Description:** Since live demos may not happen (judges may select winners from submissions alone), README.md is the **primary paper deliverable** alongside the deployed URL. Targets:
 
-- **800–1,200 words.** Long enough to tell the durability story, short enough that a judge with 6 projects to review reads to the end.
+- **800–2,000 words** (target ~1,500–1,800 for enterprise scope). Long enough to tell the durability story plus full setup/configuration/deployment, short enough that a judge with 6 projects to review can scan headings and skim. Enterprise-grade depth on setup is preferred over brevity.
 - **Hero screenshot** at the top — `docs/screenshot-critical.png` (war room in CRITICAL state, captured during T8.1.10 rehearsal).
 - **One-paragraph elevator pitch** below the hero.
 - **"Why this matters"** — frame the problem (every team has a Slack channel where deploys go to die). Cite the cost of missing a bad deploy.
@@ -3921,7 +3921,7 @@ echo "Dispatch code-simplifier:code-simplifier on: README.md"
 node -e "
 const r = require('fs').readFileSync('README.md','utf8');
 const words = r.split(/\\s+/).filter(Boolean).length;
-if (words < 800 || words > 1500) { console.error('README out of band [800, 1500] words: ' + words); process.exit(1); }
+if (words < 800 || words > 2200) { console.error('README out of band [800, 2200] words: ' + words); process.exit(1); }
 const hero = (r.match(/!\\[[^\\]]*\\]\\(docs\\/screenshot-critical\\.png\\)/) || []).length;
 if (hero < 1) { console.error('hero screenshot embed missing'); process.exit(1); }
 const video = (r.match(/!\\[[^\\]]*\\]\\([^)]+\\)\\]\\((https?:\\/\\/[^)]+(youtu\\.be|youtube|loom)[^)]+)\\)/i) || r.match(/(https?:\\/\\/[^)\\s]+(youtu\\.be|youtube|loom)[^)\\s]+)/i) || []).length;
