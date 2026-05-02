@@ -11,8 +11,9 @@ import { diffAgent as diffInvestigator } from "./agents/diff";
 import { traceInvestigator } from "./investigators/trace";
 import { runtimeInvestigator } from "./investigators/runtime";
 import { synthesize } from "./synthesizer";
-import { buildPageEmbed, postEmbed } from "../lib/discord";
-import { kv } from "../lib/db";
+import { buildPageEmbed } from "../lib/discord";
+import { kvSet, kvGet, kvDel, postDiscordEmbed } from "./steps/kv-ops";
+import { buildSignalName, applyAck, computeTimeoutAt } from "./watchdog-helpers";
 import type { InvestigatorInput, InvestigatorResult } from "./investigators/_base";
 
 type WatchdogInput = {
@@ -35,7 +36,7 @@ type WatchdogResult = {
 };
 
 type AckPayload = {
-  action_type: "ack" | "hold" | "page" | "timeout";
+  action_type: "ack" | "hold" | "page";
   user: { id: string; username: string };
   ts?: string;
 };
@@ -45,67 +46,6 @@ const DISPATCH_THRESHOLD = Math.max(
   Math.min(1, parseFloat(process.env.DISPATCH_THRESHOLD ?? "0.6"))
 );
 
-const VALID_ACTIONS = new Set(["ack", "hold", "page"]);
-
-const HOLD_DURATION_MINUTES = parseInt(
-  process.env.HOLD_DURATION_MINUTES ?? "30",
-  10
-);
-
-const WDK_PAUSE_MAX_SECONDS = parseInt(
-  process.env.WDK_PAUSE_MAX_SECONDS ?? "86400",
-  10
-);
-
-export function buildSignalName(deploy_id: string): string {
-  return `deploy:ack:${deploy_id}`;
-}
-
-export function validateAckPayload(payload: unknown): boolean {
-  if (!payload || typeof payload !== "object") return false;
-  const p = payload as Record<string, unknown>;
-  if (!p.action_type || !VALID_ACTIONS.has(p.action_type as string))
-    return false;
-  if (!p.user || typeof p.user !== "object") return false;
-  const u = p.user as Record<string, unknown>;
-  if (typeof u.id !== "string" || !u.id) return false;
-  if (typeof u.username !== "string") return false;
-  return true;
-}
-
-export function computeTimeoutAt(now: Date): string {
-  return new Date(now.getTime() + WDK_PAUSE_MAX_SECONDS * 1000).toISOString();
-}
-
-export function applyAck(
-  verdictRec: Record<string, unknown>,
-  ack: { action_type: string; user: { id: string; username: string } }
-): Record<string, unknown> {
-  if (verdictRec.acknowledged_at) return verdictRec;
-
-  const now = new Date().toISOString();
-  const base = {
-    ...verdictRec,
-    acknowledged_at: now,
-    acknowledged_by: ack.user.username,
-    action_taken: ack.action_type,
-  };
-
-  if (ack.action_type === "hold") {
-    return {
-      ...base,
-      held_until: new Date(
-        Date.now() + HOLD_DURATION_MINUTES * 60 * 1000
-      ).toISOString(),
-    };
-  }
-
-  if (ack.action_type === "page") {
-    return { ...base, paged_at: now };
-  }
-
-  return base;
-}
 
 async function dispatchInvestigators(
   input: InvestigatorInput,
@@ -168,7 +108,7 @@ async function synthesizeAndPage(
   if (channelId) {
     try {
       const { embed, row } = buildPageEmbed({ deploy_id: sha, verdict });
-      await postEmbed(channelId, [embed], [row]);
+      await postDiscordEmbed(channelId, [embed], [row]);
     } catch (err) {
       console.warn("[watchdog] Discord embed post failed:", err);
     }
@@ -181,47 +121,25 @@ async function synthesizeAndPage(
 
   const hook = createHook<AckPayload>({ token: hookToken });
 
-  await kv.set(`pause_state:${sha}`, {
+  await kvSet(`pause_state:${sha}`, {
     paused_at: pausedAt.toISOString(),
     hook_token: hookToken,
     timeout_at: timeoutAt,
   });
 
-  let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
-  const ackPayload = await Promise.race([
-    hook,
-    new Promise<AckPayload>((resolve) => {
-      timeoutTimer = setTimeout(
-        () =>
-          resolve({
-            action_type: "timeout",
-            user: { id: "system", username: "timeout" },
-          }),
-        WDK_PAUSE_MAX_SECONDS * 1000
-      );
-    }),
-  ]);
-
-  clearTimeout(timeoutTimer);
+  const ackPayload = await hook;
   hook.dispose();
 
   const existingVerdict =
-    (await kv.get<Record<string, unknown>>(`verdicts:${sha}`)) ?? {};
+    (await kvGet<Record<string, unknown>>(`verdicts:${sha}`)) ?? {};
 
-  if (ackPayload.action_type === "timeout") {
-    await kv.set(`verdicts:${sha}`, {
-      ...existingVerdict,
-      timeout_at: new Date().toISOString(),
-    });
-  } else {
-    const updated = applyAck(existingVerdict, {
-      action_type: ackPayload.action_type,
-      user: ackPayload.user,
-    });
-    await kv.set(`verdicts:${sha}`, updated);
-  }
+  const updated = applyAck(existingVerdict, {
+    action_type: ackPayload.action_type,
+    user: ackPayload.user,
+  });
+  await kvSet(`verdicts:${sha}`, updated);
 
-  await kv.del(`pause_state:${sha}`);
+  await kvDel(`pause_state:${sha}`);
   return ackPayload;
 }
 

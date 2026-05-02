@@ -1,4 +1,4 @@
-import { kv } from "../../lib/db";
+import { kvSet } from "../steps/kv-ops";
 
 export type InvestigatorInput = {
   deploy_id: string;
@@ -35,7 +35,7 @@ export async function emitInvestigatorEvent(
     ts: new Date().toISOString(),
   };
   try {
-    await kv.set(`investigator:${deploy_id}:${agent}`, event);
+    await kvSet(`investigator:${deploy_id}:${agent}`, event);
   } catch (err) {
     console.warn(`[investigator:${agent}] KV emit failed:`, err);
   }
