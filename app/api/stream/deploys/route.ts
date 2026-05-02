@@ -44,6 +44,20 @@ export async function GET() {
             }
           }
 
+          const investigatorKeys = await kv.list("investigator:");
+          for (const key of investigatorKeys) {
+            if (!lastSeenKeys.has(key)) {
+              const record = await kv.get(key);
+              if (record) {
+                controller.enqueue(
+                  encoder.encode(
+                    `event: investigator\ndata: ${JSON.stringify(record)}\n\n`
+                  )
+                );
+              }
+            }
+          }
+
           const threatKeys = await kv.list("threats:");
           for (const key of threatKeys) {
             if (!lastSeenKeys.has(key)) {
@@ -61,6 +75,7 @@ export async function GET() {
           lastSeenKeys = new Set([
             ...currentKeys,
             ...(await kv.list("verdicts:")),
+            ...(await kv.list("investigator:")),
             ...(await kv.list("threats:")),
           ]);
         } catch (err) {

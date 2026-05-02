@@ -19,6 +19,7 @@ type WarRoomState = {
   deploys_analyzed: number;
   deploys: DeployEvent[];
   investigators: Record<string, InvestigatorEvent>;
+  agents: Record<string, InvestigatorEvent>;
   feed: FeedEvent[];
   verdict: VerdictEvent | null;
   threats: ThreatSurfaceEvent["items"];
@@ -30,6 +31,7 @@ export const initialState: WarRoomState = {
   deploys_analyzed: 0,
   deploys: [],
   investigators: {},
+  agents: {},
   feed: [],
   verdict: null,
   threats: [],
@@ -59,6 +61,10 @@ export function reducer(state: WarRoomState, event: SSEEvent): WarRoomState {
         investigators: {
           ...state.investigators,
           [`${event.deploy_id}:${event.agent}`]: event,
+        },
+        agents: {
+          ...state.agents,
+          [event.agent]: event,
         },
       };
     case "feed":
@@ -107,10 +113,22 @@ export function useDeploysSSE() {
     const es = new EventSource("/api/stream/deploys");
     esRef.current = es;
 
-    es.onmessage = (msg) => {
+    const handler = (msg: MessageEvent) => {
       const event = parseSSEEvent(`data: ${msg.data}`);
       if (event) dispatch(event);
     };
+
+    es.onmessage = handler;
+    for (const t of [
+      "deploy",
+      "verdict",
+      "investigator",
+      "feed",
+      "threat_surface",
+      "status",
+    ]) {
+      es.addEventListener(t, handler);
+    }
 
     return () => {
       es.close();
@@ -141,7 +159,27 @@ export function useDeploysSSE() {
     })),
     activeDeploy: null,
     setActiveDeploy: () => {},
-    agents: {},
+    agents: Object.fromEntries(
+      Object.values(liveState.agents).map((a) => [
+        a.agent,
+        {
+          status: a.status,
+          lines: a.current_action
+            ? [
+                {
+                  ts: new Date().toISOString(),
+                  text: a.current_action,
+                  cur: a.status !== "complete",
+                },
+              ]
+            : [],
+          steps: a.status === "complete" ? 1 : 0,
+          tokens: 0,
+          latency: "—",
+          finding: a.finding,
+        },
+      ])
+    ),
     feed: liveState.feed.map((f) => ({
       ts: f.ts,
       severity: f.severity,
