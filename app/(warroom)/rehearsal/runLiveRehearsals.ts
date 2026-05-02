@@ -130,6 +130,39 @@ export async function discordPingDemo(
   return { ok: false, status: res.status, message: "bad JSON from discord-ping" };
 }
 
+export type LlmSmokeDemoResult =
+  | { ok: true; preview: string; llm?: string }
+  | { ok: false; status: number; message: string };
+
+/** POST /api/demo/llm-smoke — one generateText via getGateway(). */
+export async function llmSmokeDemo(
+  signal?: AbortSignal
+): Promise<LlmSmokeDemoResult> {
+  const eff = signal ?? new AbortController().signal;
+  const res = await postDemoJson("/api/demo/llm-smoke", {}, eff);
+  const text = await res.text().catch(() => "");
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: text.slice(0, 240) };
+  }
+  try {
+    const j = JSON.parse(text) as {
+      ok?: boolean;
+      preview?: string;
+      llm?: string;
+      error?: string;
+    };
+    if (j.ok && typeof j.preview === "string") {
+      return { ok: true, preview: j.preview, llm: j.llm };
+    }
+    if (j.error) {
+      return { ok: false, status: res.status, message: j.error };
+    }
+  } catch {
+    /* fall through */
+  }
+  return { ok: false, status: res.status, message: "bad JSON from llm-smoke" };
+}
+
 export type DemoTriggerResult =
   | { ok: true; sha: string; score?: number }
   | { ok: false; status: number; message: string };

@@ -14,6 +14,7 @@
     "verify:tier4": "bash scripts/verify-tier4.sh",
     "verify:canonical": "node scripts/verify-canonical.mjs",
     "verify:integrations": "bash scripts/smoke-integrations.sh",
+    "smoke:prod-llm-discord": "node scripts/smoke-prod-llm-discord.mjs",
     "verify": "npm run verify:tier1 && npm run verify:tier3 && npm run verify:tier4 && npm run test:e2e"
   },
   "dependencies": {

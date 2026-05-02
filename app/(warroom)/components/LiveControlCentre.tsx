@@ -6,6 +6,7 @@ import {
   demoTriggerWatchdog,
   discordPingDemo,
   gitRehearsalDemo,
+  llmSmokeDemo,
 } from "../rehearsal/runLiveRehearsals";
 
 type LiveControlCentreProps = {
@@ -19,6 +20,7 @@ type BusyKey =
   | "inject"
   | "revert"
   | "discord"
+  | "llm"
   | "trigger"
   | "reset"
   | null;
@@ -132,6 +134,32 @@ export function LiveControlCentre({
                 }
               >
                 {busy === "discord" ? "…" : "◇ PING @here"}
+              </button>
+            </div>
+          </div>
+
+          <div className="live-ctrl-centre-section">
+            <span className="live-ctrl-centre-label tab-num">AI · SMOKE</span>
+            <div className="live-ctrl-centre-row">
+              <button
+                type="button"
+                className="btn"
+                disabled={anyApiBusy || boardRunning}
+                title="POST /api/demo/llm-smoke · generateText via getGateway()"
+                onClick={() =>
+                  void run("llm", async () => {
+                    const r = await llmSmokeDemo();
+                    if (r.ok) {
+                      setHint(
+                        `llm · ${r.llm ?? "?"} · ${r.preview.slice(0, 48)}${r.preview.length > 48 ? "…" : ""}`
+                      );
+                    } else if (!r.ok) {
+                      setHint(`llm · ${r.status} ${r.message}`);
+                    }
+                  })
+                }
+              >
+                {busy === "llm" ? "…" : "◆ TEST LLM"}
               </button>
             </div>
           </div>

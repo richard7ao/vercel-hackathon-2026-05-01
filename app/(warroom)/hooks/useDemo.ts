@@ -16,6 +16,7 @@ import {
   initAgents,
   nowTs,
 } from "../data";
+import { discordPingDemo } from "../rehearsal/runLiveRehearsals";
 
 type LoopPhase = "playing" | "holding" | "paused-by-user";
 
@@ -224,6 +225,22 @@ export function useDemo(mode: "demo" | "live" = "demo") {
     setVerdict(null);
     setLoopState("playing");
     setNextPlayInMs(0);
+
+    void discordPingDemo().then((r) => {
+      if (r.ok) {
+        pushFeed({
+          severity: "info",
+          kind: "bot",
+          message: `demo start · discord @here ping sent (msg ${r.message_id.slice(0, 8)}…)`,
+        });
+      } else {
+        pushFeed({
+          severity: "warn",
+          kind: "bot",
+          message: `demo start · discord ping failed (${r.status}) — check DISCORD_* env or LIVE control`,
+        });
+      }
+    });
 
     const newDeploy: Deploy = {
       id: "dep_048",
