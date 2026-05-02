@@ -105,6 +105,7 @@ node -e "require('dotenv').config({path:'.env.local'}); fetch('https://gateway.a
 - Node binary (`/opt/homebrew/bin/node`) is wrapped by an `_load_nvm` shell function in interactive zsh; non-interactive shells need the absolute path or login-shell invocation. Use `bash -lc "node ..."` if a Tier 4 hits this.
 - `ffmpeg` / `ffprobe` are not installed by default on this machine. T9.1.1 / T9.1.2 verify blocks rely on `ffprobe` for video duration — install via `brew install ffmpeg` before starting T9.
 - Vercel KV has a hard limit of 25 MB per value and 1 KB per key. Do not store full git diffs in KV; truncate to first ~5 KB if needed.
+- **`CLAUDE_KEY`** (Anthropic API key) is what live workflows use today: `lib/ai-gateway.ts` reads **`CLAUDE_KEY`** first, then **`ANTHROPIC_API_KEY`**. Set **`CLAUDE_KEY`** in Vercel project env so production pushes and rehearsals get real LLM output (otherwise calls fall back or fail softly per step).
 - AI Gateway model strings use `provider/model` form (`anthropic/claude-sonnet-4-6`, NOT `claude-sonnet-4-6` alone). Bare model names route through the default provider and may not match Claude.
 - `.env.local` must be in `.gitignore` before any commit. T0.1.4's tier1 verifies this. If a commit happens with secrets, rotate the keys before continuing.
 - The `war-room/` folder uses CDN React + Babel inline transforms; the production port to Next.js (T0.3.1–T0.3.3) replaces these with real npm imports.

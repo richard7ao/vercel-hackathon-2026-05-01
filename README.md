@@ -153,7 +153,9 @@ npm run dev
 
 | Variable | Source |
 |----------|--------|
-| `AI_GATEWAY_API_KEY` | Vercel AI Gateway dashboard |
+| `CLAUDE_KEY` | **Anthropic API key** — used for all live LLM calls (summarizer, investigator agents, verdict synthesizer). Set this in Vercel for production workflows. If unset, `ANTHROPIC_API_KEY` is used as a fallback. |
+| `ANTHROPIC_API_KEY` | Optional fallback when `CLAUDE_KEY` is not set (same key, different name). |
+| `AI_GATEWAY_API_KEY` | Vercel AI Gateway (optional today — verify scripts / future Gateway-only path) |
 | `REDIS_URL` | Vercel Marketplace Redis |
 | `GITHUB_WEBHOOK_SECRET` | `openssl rand -hex 32` |
 | `DISCORD_BOT_TOKEN` | Discord Developer Portal |
