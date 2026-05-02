@@ -15,17 +15,19 @@ phase() { printf '\n=== %s ===\n' "$1"; }
 fail()  { echo "FAIL: $1"; exit 1; }
 
 tsx_run() {
-  (cd "$ROOT" && npx tsx --require dotenv/config --input-type=module -e "$1")
+  (cd "$ROOT" && /opt/homebrew/bin/npx tsx --require dotenv/config -e "$1")
 }
 
 kv_get() {
   tsx_run "
-import('./lib/db.ts').then(async (m) => {
-  const kv = (m.default || m).kv || m.kv;
-  const v = await kv.get('$1');
-  console.log(JSON.stringify(v));
+const { redisGet } = require('./lib/db-redis.ts');
+async function main() {
+  const v = await redisGet('$1');
+  if (v === null) { console.log('null'); }
+  else { console.log(v); }
   process.exit(0);
-}).catch(() => { console.log('null'); process.exit(0); });
+}
+main().catch(() => { console.log('null'); process.exit(0); });
 " 2>/dev/null
 }
 
@@ -90,7 +92,7 @@ trigger_demo() {
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer $DEMO_RESET_TOKEN" \
     --data "{\"sha\":\"$sha\",\"score\":$score}")
-  echo "trigger response: $STATUS"
+  echo "trigger response: $STATUS" >&2
   [ "$STATUS" = "200" ] || fail "trigger returned $STATUS"
 }
 
@@ -102,7 +104,7 @@ resume_demo() {
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer $DEMO_RESET_TOKEN" \
     --data "{\"deploy_id\":\"$deploy_id\",\"action_type\":\"$action\",\"username\":\"$username\"}")
-  echo "resume response: $STATUS"
+  echo "resume response: $STATUS" >&2
   echo "$STATUS"
 }
 
@@ -139,16 +141,16 @@ merge_demo_branch() {
   local branch="$1"
   [ -n "$REPO_PATH" ] || fail "REPO_PATH not set"
   cd "$REPO_PATH"
-  git checkout main 2>/dev/null
-  git reset --hard "$WATERMARK" 2>/dev/null
-  git merge --ff-only "$branch" 2>/dev/null || git merge "$branch" --no-edit 2>/dev/null
+  git checkout main >/dev/null 2>&1
+  git reset --hard "$WATERMARK" >/dev/null 2>&1
+  git merge --ff-only "$branch" >/dev/null 2>&1 || git merge "$branch" --no-edit >/dev/null 2>&1
   local SHA
   SHA=$(git rev-parse HEAD)
-  echo "$SHA"
   if git remote get-url origin &>/dev/null; then
-    git push --force-with-lease origin main 2>/dev/null || echo "  push skipped"
+    git push --force-with-lease origin main >/dev/null 2>&1 || true
   fi
   cd "$ROOT"
+  echo "$SHA"
 }
 
 reset_demo_repo() {
