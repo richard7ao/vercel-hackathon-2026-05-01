@@ -6,7 +6,7 @@ import { StatusBlock } from "./components/StatusBlock";
 import { TimelineRow } from "./components/TimelineRow";
 import { AgentsPanel } from "./components/AgentsPanel";
 import { FeedPanel } from "./components/FeedPanel";
-import { HeatmapPanel } from "./components/HeatmapPanel";
+import { SystemHeatmap } from "./components/SystemHeatmap";
 import { ThreatPanel } from "./components/ThreatPanel";
 import { VerdictModal } from "./components/VerdictModal";
 import { CountdownChip } from "./components/CountdownChip";
@@ -35,7 +35,7 @@ export default function WarRoom() {
       <div className="main-grid">
         <AgentsPanel agents={data.agents} />
         <FeedPanel feed={data.feed} />
-        <HeatmapPanel grid={data.heatmap} peakCell={data.peakCell} />
+        <SystemHeatmap deploys={data.deploys} />
         <ThreatPanel threats={data.threats} />
       </div>
 
