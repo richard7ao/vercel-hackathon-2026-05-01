@@ -1,6 +1,6 @@
 "use client";
 
-import { useDemo } from "./hooks/useDemo";
+import { useDeploysSSE } from "./hooks/useDeploysSSE";
 import { TopBar } from "./components/TopBar";
 import { StatusBlock } from "./components/StatusBlock";
 import { TimelineRow } from "./components/TimelineRow";
@@ -12,51 +12,61 @@ import { VerdictModal } from "./components/VerdictModal";
 import { CountdownChip } from "./components/CountdownChip";
 
 export default function WarRoom() {
-  const demo = useDemo();
+  const data = useDeploysSSE();
 
   return (
     <div className="shell">
-      <TopBar activeDeploy={demo.activeDeploy} />
+      <TopBar activeDeploy={data.activeDeploy} />
 
       <StatusBlock
-        state={demo.state}
-        uptime={demo.uptime}
-        deploysAnalyzed={demo.deploysAnalyzed}
-        agentsStanding={demo.agentsStanding}
-        mtta={demo.mtta}
+        state={data.state}
+        uptime={data.uptime}
+        deploysAnalyzed={data.deploysAnalyzed}
+        agentsStanding={data.agentsStanding}
+        mtta={data.mtta}
       />
 
       <TimelineRow
-        deploys={demo.deploys}
-        activeId={demo.activeDeploy?.id ?? null}
-        onSelect={demo.setActiveDeploy}
+        deploys={data.deploys}
+        activeId={data.activeDeploy?.id ?? null}
+        onSelect={data.setActiveDeploy}
       />
 
       <div className="main-grid">
-        <AgentsPanel agents={demo.agents} />
-        <FeedPanel feed={demo.feed} />
-        <HeatmapPanel grid={demo.heatmap} peakCell={demo.peakCell} />
-        <ThreatPanel threats={demo.threats} />
+        <AgentsPanel agents={data.agents} />
+        <FeedPanel feed={data.feed} />
+        <HeatmapPanel grid={data.heatmap} peakCell={data.peakCell} />
+        <ThreatPanel threats={data.threats} />
       </div>
 
       <VerdictModal
-        verdict={demo.verdict}
-        onClose={() => demo.setVerdict(null)}
+        verdict={data.verdict}
+        onClose={() => data.setVerdict(null)}
       />
 
       <div className="demo-ctrl">
-        {!demo.running && (
-          <button className="btn primary" onClick={demo.runDemo}>
+        {"mode" in data && (
+          <button
+            className="btn"
+            onClick={() =>
+              data.setMode(data.mode === "demo" ? "live" : "demo")
+            }
+          >
+            {data.mode === "demo" ? "LIVE" : "DEMO"}
+          </button>
+        )}
+        {!data.running && (
+          <button className="btn primary" onClick={data.runDemo}>
             ▶ RUN DEMO
           </button>
         )}
-        <button className="btn" onClick={demo.reset}>
+        <button className="btn" onClick={data.reset}>
           ↺ RESET
         </button>
       </div>
 
-      {demo.loopState === "holding" && (
-        <CountdownChip nextPlayInMs={demo.nextPlayInMs} />
+      {data.loopState === "holding" && (
+        <CountdownChip nextPlayInMs={data.nextPlayInMs} />
       )}
 
       <div className="scanlines" />
