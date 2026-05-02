@@ -4,6 +4,12 @@ import { ingest } from "./steps/ingest";
 import { extractSignals } from "./steps/extract-signals";
 import { scoreStep } from "./steps/score";
 import { summarize } from "./steps/summarize";
+import { historyInvestigator } from "./investigators/history";
+import { dependencyInvestigator } from "./investigators/dependency";
+import { diffInvestigator } from "./investigators/diff";
+import { traceInvestigator } from "./investigators/trace";
+import { runtimeInvestigator } from "./investigators/runtime";
+import type { InvestigatorInput, InvestigatorResult } from "./investigators/_base";
 
 type WatchdogInput = {
   sha: string;
@@ -20,7 +26,38 @@ type WatchdogResult = {
   verdict_bucket?: string;
   signals?: Record<string, unknown>;
   tldr?: string;
+  investigators?: InvestigatorResult[];
 };
+
+const DISPATCH_THRESHOLD = Math.max(
+  0,
+  Math.min(1, parseFloat(process.env.DISPATCH_THRESHOLD ?? "0.6"))
+);
+
+async function dispatchInvestigators(
+  input: InvestigatorInput,
+  finalScore: number
+): Promise<InvestigatorResult[]> {
+  if (finalScore < DISPATCH_THRESHOLD) return [];
+
+  const mode = process.env.BRIDGE_MODE ?? "production";
+  const agents =
+    mode === "demo"
+      ? [
+          historyInvestigator(input),
+          dependencyInvestigator(input),
+          diffInvestigator(input),
+          traceInvestigator(input),
+          runtimeInvestigator(input),
+        ]
+      : [
+          historyInvestigator(input),
+          dependencyInvestigator(input),
+          diffInvestigator(input),
+        ];
+
+  return Promise.all(agents);
+}
 
 export async function watchdog(input: WatchdogInput): Promise<WatchdogResult> {
   const { sha, repo, _force_score, _force_failure } = input;
@@ -30,7 +67,13 @@ export async function watchdog(input: WatchdogInput): Promise<WatchdogResult> {
   }
 
   if (_force_score !== undefined) {
-    return { sha, score: _force_score };
+    const invInput: InvestigatorInput = {
+      deploy_id: sha,
+      sha,
+      files: [],
+    };
+    const investigators = await dispatchInvestigators(invInput, _force_score);
+    return { sha, score: _force_score, investigators };
   }
 
   const [owner, repoName] = repo.split("/");
@@ -55,5 +98,13 @@ export async function watchdog(input: WatchdogInput): Promise<WatchdogResult> {
     sha,
   });
 
-  return { sha, score, verdict_bucket, signals, tldr };
+  const invInput: InvestigatorInput = {
+    deploy_id: sha,
+    sha,
+    author: ingestResult.author,
+    files: ingestResult.files,
+  };
+  const investigators = await dispatchInvestigators(invInput, score);
+
+  return { sha, score, verdict_bucket, signals, tldr, investigators };
 }
