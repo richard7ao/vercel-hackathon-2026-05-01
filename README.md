@@ -1,6 +1,8 @@
 # Bridge — Production Deploy War Room
 
-> **A durable multi-agent system that watches a codebase's deployments. When code ships, it scores the push for risk, dispatches up to five specialist investigator agents in parallel, collapses their findings into a single verdict, and pauses for a human acknowledgement in Slack — all over a Vercel Workflow Development Kit (WDK) backbone that survives crashes, redeploys, and pauses for as long as humans need.**
+![Bridge war room in CRITICAL state](docs/screenshot-critical.png)
+
+> **A durable multi-agent system that watches a codebase's deployments. When code ships, it scores the push for risk, dispatches up to five specialist investigator agents in parallel, collapses their findings into a single verdict, and pauses for a human acknowledgement via Discord — all over a Vercel Workflow Development Kit (WDK) backbone that survives crashes, redeploys, and pauses for as long as humans need.**
 
 ---
 
@@ -8,21 +10,20 @@
 |---|---|
 | **Live demo** | https://vercel-hackathon-2026-05-01.vercel.app |
 | **Demo-target repo (the codebase Bridge watches)** | https://github.com/richard7ao/meridian-core-banking |
-| **Submission video** | _captured during T9.1.3 — link inserted post-record_ |
+| **Submission video** | _link inserted post-record_ |
 | **Hackathon track** | Vercel Workflow Development Kit (WDK) — Track 1 |
-| **Spec** | [`docs/superpowers/specs/2026-05-01-bridge-design.md`](docs/superpowers/specs/2026-05-01-bridge-design.md) |
 
 ---
 
 ## What you're looking at
 
-Open the **live demo** above and you land on a Bloomberg-terminal-style war room. By default it auto-runs a 25-second simulation of a risky deploy: a 14-day-tenure new hire pushes a change to `lib/auth.ts` at 3:42 AM that adds an outbound `fetch()` to a non-allowlisted host. The status block flips from `ALL CLEAR` through `MONITORING` to `CRITICAL`, five investigator agents fan out in parallel and stream their findings, a synthesizer collapses them into a verdict, and the workflow pauses for a Slack acknowledgement. The simulation loops every ~33 seconds.
+Open the **live demo** above and you land on a Bloomberg-terminal-style war room. By default it auto-runs a 25-second simulation of a risky deploy: a new hire pushes a change to `lib/auth.ts` at 3:42 AM that adds an outbound `fetch()` to a non-allowlisted host. The status block flips from `ALL CLEAR` through `MONITORING` to `CRITICAL`, five investigator agents fan out in parallel and stream their findings, a synthesizer collapses them into a verdict, and the workflow pauses for a Discord acknowledgement. The simulation loops every ~33 seconds.
 
 A `[ DEMO · auto-loop ]` chip top-right indicates simulation mode. Flip to `[ LIVE · connected ]` (or visit `?live=1`) to subscribe to real GitHub webhooks from `meridian-core-banking`.
 
 ## Why Bridge
 
-Every team has a Slack channel where deploys go to die. A push lands, a deploy goes green, and *if* something goes wrong, the team finds out from users hours later. Bridge replaces that channel with a war room that **investigates pushes for you** — not just monitors them.
+Every team has a channel where deploys go to die. A push lands, a deploy goes green, and *if* something goes wrong, the team finds out from users hours later. Bridge replaces that channel with a war room that **investigates pushes for you** — not just monitors them.
 
 The interesting part is the durability story. Each investigator is a sub-workflow on Vercel WDK. Each step is durable. If the Vercel function dies mid-investigation, the workflow resumes where it left off. If a human is paged and takes 40 minutes to respond, the workflow simply waits — for as long as needed, surviving any number of redeploys. **That is the WDK pitch made concrete.**
 
@@ -33,8 +34,8 @@ The interesting part is the durability story. Each investigator is a sub-workflo
 │                                                                    │
 │  ingest (Octokit) → extract-signals → score                        │
 │                            │                                       │
-│                            │ if score ≥ 0.6                        │
-│                            ▼                                       │
+│                            │ if score >= 0.6                       │
+│                            v                                       │
 │   ┌──────────────────────────────────────────────────────────┐    │
 │   │   dispatch 5 investigator sub-workflows in parallel:     │    │
 │   │                                                          │    │
@@ -42,22 +43,22 @@ The interesting part is the durability story. Each investigator is a sub-workflo
 │   │   (each is a DurableAgent — streaming + retries free)    │    │
 │   └──────────────────────────────────────────────────────────┘    │
 │                            │                                       │
-│                            ▼                                       │
+│                            v                                       │
 │                       synthesizer (LLM)                            │
 │                            │                                       │
-│                            ▼                                       │
-│         post Block Kit message to Slack · PAUSE workflow           │
+│                            v                                       │
+│     post embed + buttons to Discord · PAUSE workflow               │
 │                            │                                       │
-│                            │ awaits slack:ack:{deploy_id} signal   │
-│                            ▼                                       │
-│                  human clicks Ack / Hold / Page                    │
+│                            │ awaits discord:ack:{deploy_id} signal │
+│                            v                                       │
+│            human clicks Acknowledge / Hold / Page                  │
 │                            │                                       │
-│                            ▼                                       │
+│                            v                                       │
 │              resume → update KV → SSE → war-room reflects          │
 └────────────────────────────────────────────────────────────────────┘
 ```
 
-**Signals** (in `lib/signals/`): structural (external `fetch()`, auth-path edits, secret shapes, critical-path files, new dependencies, new endpoints), behavioral (author novelty against KV history, file-hour novelty, file-co-change novelty), temporal (off-hours, weekend, rapid-succession). **Scoring**: `0.35·structural + 0.35·behavioral + 0.15·temporal + 0.15·compound_bonus`. **Compound bonus** fires for triples like `auth+external_fetch+off_hours` or `critical_path+novel_author`.
+**Signals** (in `lib/signals/`): structural (external `fetch()`, auth-path edits, secret shapes, critical-path files, new dependencies, new endpoints), behavioral (author novelty against KV history, file-hour novelty, file-co-change novelty), temporal (off-hours, weekend, rapid-succession). **Scoring**: `0.35 * structural + 0.35 * behavioral + 0.15 * temporal + 0.15 * compound_bonus`. **Compound bonus** fires for triples like `auth + external_fetch + off_hours` or `critical_path + novel_author`.
 
 ## Tech stack
 
@@ -67,22 +68,10 @@ The interesting part is the durability story. Each investigator is a sub-workflo
 | Workflows | Vercel Workflow Development Kit (`workflow` 4.2 · `@workflow/ai` 4.1) |
 | LLM | Vercel AI Gateway (model: `anthropic/claude-sonnet-4-6`) via `ai` SDK 6 |
 | Storage | Redis (Vercel Marketplace / Upstash) |
-| Slack | `@slack/web-api` 7 + Block Kit + signing-secret-verified interactive endpoint |
+| Notifications | Discord REST API + interaction webhook |
 | Source ingest | Octokit 5 |
 | Validation | Zod 4 |
 | Hosting | Vercel |
-
-## Prerequisites
-
-| Tool | Version |
-|---|---|
-| Node.js | ≥ 20 (verified: 25.8.1) |
-| npm | ≥ 10 |
-| Vercel CLI | latest (`npm i -g vercel`) |
-| GitHub CLI (`gh`) | ≥ 2.40 |
-| Vercel account | with AI Gateway access |
-| GitHub account | with permission to add webhooks on the demo-target repo |
-| Slack workspace | with permission to install a custom app |
 
 ## Quick start
 
@@ -97,62 +86,59 @@ vercel link
 vercel env pull .env.local
 
 # 3. Run locally
-npm run dev          # → http://localhost:3000
+npm run dev          # -> http://localhost:3000
 ```
 
-Visit `http://localhost:3000` and you'll see the war room running in DEMO mode (auto-looping simulation).
+Visit `http://localhost:3000` and you'll see the war room running in DEMO mode (auto-looping simulation). No environment variables needed for demo mode.
 
-## Detailed setup
+## Environment variables
 
-### 1. Configure environment variables
-
-`.env.local` must contain:
+`.env.local` must contain these for live mode and production:
 
 | Variable | Source | Used by |
 |---|---|---|
-| `AI_GATEWAY_API_KEY` | https://vercel.com/ai-gateway → Create Key | Synthesizer + Diff Inspector + TL;DR |
-| `REDIS_URL` | Vercel Marketplace → Redis (Upstash) → "Connect" | `lib/db.ts` storage layer |
-| `MONITORED_REPO` | hardcode `meridian/core-banking` (display label only) | TopBar repo crumb |
+| `AI_GATEWAY_API_KEY` | Vercel AI Gateway dashboard | Synthesizer + diff inspector + TL;DR generation |
+| `REDIS_URL` | Vercel Marketplace Redis (Upstash) | `lib/db.ts` storage layer |
 | `GITHUB_WEBHOOK_SECRET` | `openssl rand -hex 32` (also set in GitHub webhook config) | Webhook HMAC validation |
-| `SLACK_BOT_TOKEN` | Slack app → OAuth & Permissions → Install (xoxb-…) | Block Kit posts |
-| `SLACK_SIGNING_SECRET` | Slack app → Basic Information → Signing Secret | Interactive endpoint verification |
-| `SLACK_CHANNEL_ID` | Right-click channel → Copy link → `C…` segment | Where bot posts |
-| `BRIDGE_MODE` | `demo` (default) or `production` | Trace/Runtime stub behavior |
+| `DISCORD_BOT_TOKEN` | Discord Developer Portal → Bot → Token | Posting verdict embeds |
+| `DISCORD_PUBLIC_KEY` | Discord Developer Portal → General Information | Interaction webhook verification |
+| `DISCORD_CHANNEL_ID` | Right-click channel → Copy Channel ID | Where bot posts verdicts |
+| `MONITORED_REPO` | Hardcode `meridian/core-banking` (display label) | TopBar repo crumb |
+| `BRIDGE_MODE` | `demo` (default) or `production` | Trace/runtime investigator behavior |
 | `DEMO_RESET_TOKEN` | `openssl rand -hex 16` | Auth on `/api/demo/reset` |
-| `BUDGET_USD` | `10` (default) | Live budget meter (T8.1.7) |
+| `BUDGET_USD` | `10` (default) | Live budget meter baseline |
 
-Copy `.env.example` (when committed) to `.env.local`, populate, then **set every value also in the Vercel project settings** so production deploys have them.
+## Detailed setup
 
-### 2. Provision Redis
+### 1. Provision Redis
 
-In the Vercel dashboard → your project → Storage → Create Database → Redis (Upstash). Copy `REDIS_URL`. After connecting, `vercel env pull .env.local` syncs it down.
+In the Vercel dashboard: your project → Storage → Create Database → Redis (Upstash). Copy `REDIS_URL`. After connecting, `vercel env pull .env.local` syncs it down.
 
-### 3. Provision the AI Gateway key
+### 2. Provision the AI Gateway key
 
-https://vercel.com/ai-gateway → Create Key → copy as `AI_GATEWAY_API_KEY`. The gateway routes model strings like `anthropic/claude-sonnet-4-6` to the right provider with built-in fallbacks; no raw provider keys are ever stored.
+Vercel AI Gateway dashboard → Create Key → copy as `AI_GATEWAY_API_KEY`. The gateway routes model strings like `anthropic/claude-sonnet-4-6` to the right provider with built-in fallbacks; no raw provider keys are ever stored.
 
-### 4. Set up the Slack app
+### 3. Set up the Discord bot
 
-1. https://api.slack.com/apps → Create New App → From scratch.
-2. **OAuth & Permissions** → Bot token scopes: `chat:write`, `chat:write.public`, `reactions:write`. Install to workspace, copy `xoxb-…` token.
-3. **Basic Information** → copy Signing Secret.
-4. **Interactivity & Shortcuts** → Enable. Request URL = `https://<your-deploy>/api/slack/interactive`.
-5. Invite the bot to your target channel (`/invite @YourBotName`), copy the channel ID.
+1. https://discord.com/developers/applications → New Application.
+2. **Bot** tab → Reset Token → copy as `DISCORD_BOT_TOKEN`. Enable "Message Content Intent".
+3. **General Information** → copy Public Key as `DISCORD_PUBLIC_KEY`.
+4. **OAuth2** → URL Generator → scopes: `bot`, `applications.commands`. Bot permissions: Send Messages, Embed Links, Use Slash Commands. Use generated URL to invite to your server.
+5. **General Information** → Interactions Endpoint URL = `https://<your-deploy>/api/discord/interactions`.
+6. Copy the channel ID where the bot should post verdicts as `DISCORD_CHANNEL_ID`.
 
-### 5. Set up the demo-target repo
+### 4. Set up the demo-target repo
 
-The sibling repo at https://github.com/richard7ao/meridian-core-banking is already scaffolded. Clone it as a sibling of `bridge/`:
+The sibling repo at https://github.com/richard7ao/meridian-core-banking is already scaffolded with three demo branches (`demo/exfil`, `demo/privesc`, `demo/leak`). Clone it as a sibling:
 
 ```bash
-cd ..  # → parent dir
+cd ..
 git clone https://github.com/richard7ao/meridian-core-banking.git
 ```
 
-The Bridge spec writes `.demo-target-path` and `.demo-target-url` sentinels back into the Bridge repo so downstream stages (T6 history seeding, T8.1.1 demo trigger button) find it.
+### 5. Connect the GitHub webhook
 
-### 6. Connect the GitHub webhook
-
-Once Bridge is deployed (next section), point the webhook from `meridian-core-banking` at it:
+Once Bridge is deployed, point the webhook from `meridian-core-banking` at it:
 
 ```bash
 gh api repos/richard7ao/meridian-core-banking/hooks \
@@ -169,104 +155,129 @@ gh api repos/richard7ao/meridian-core-banking/hooks \
 npm run dev    # Next.js dev server on :3000
 ```
 
-Press the war room's `[ DEMO · auto-loop ]` chip to toggle to `[ LIVE ]`. Live mode subscribes to `/api/stream/deploys` (SSE) and reflects real GitHub pushes to the demo-target repo.
+The war room opens in DEMO mode by default — a fully client-side 25-second simulation that needs no backend. Toggle the `[ DEMO · auto-loop ]` chip to `[ LIVE ]` to subscribe to `/api/stream/deploys` (SSE) and reflect real GitHub pushes.
 
-## Demo modes
-
-The deployed URL has two modes, toggled in the TopBar:
-
-- **DEMO** (default for first-time visitors): runs the 25-second mock orchestration on a loop. No backend dependency — useful for hackathon judges, demo recordings, or showing colleagues. Data rows carry a small `· sim` superscript so simulated activity is never confused with real activity.
-- **LIVE**: subscribes to real Server-Sent Events from `/api/stream/deploys`, shows real Redis-backed history and any in-flight investigations.
-
-Mode persists via `localStorage` and is reflected in the URL (`?live=1`).
+Mode persists via `localStorage` and is also controllable via URL (`?live=1`).
 
 ## Project structure
 
 ```
-bridge/                                    ← THIS repo
-├── app/(warroom)/                         ← war-room dashboard route group
-│   ├── components/                        ← 11 ported TSX components
-│   ├── hooks/{useDemo,useDeploysSSE}.ts
+bridge/
+├── app/(warroom)/                         <- war-room dashboard route group
+│   ├── components/                        <- 19 TSX components
+│   │   ├── AgentCard.tsx                     agent card with scan-line shimmer
+│   │   ├── RiskScoreArc.tsx                  animated SVG risk gauge
+│   │   ├── StatusBlock.tsx                   top status block with budget meter
+│   │   ├── SystemHeatmap.tsx                 6-cell area heatmap
+│   │   ├── VerdictModal.tsx                  verdict panel with concerns
+│   │   ├── SuspendedOverlay.tsx              SUSPENDED band during pause
+│   │   ├── ModeToggle.tsx                    DEMO/LIVE toggle
+│   │   └── ...                               (12 more)
+│   ├── hooks/
+│   │   ├── useDemo.ts                        25s demo orchestration
+│   │   ├── useDeploysSSE.ts                  live SSE + demo mode switch
+│   │   └── useTickedNumber.ts                smooth counter animation
+│   ├── data.ts                            <- types + initial mock data
 │   └── page.tsx
 ├── app/api/
-│   ├── webhooks/github/route.ts           ← receives push events (T1.1.1)
-│   ├── stream/deploys/route.ts            ← SSE endpoint (T1.3.1)
-│   └── slack/interactive/route.ts         ← Slack button callback (T5.1.5)
+│   ├── webhooks/github/route.ts           <- receives push events
+│   ├── stream/deploys/route.ts            <- SSE endpoint
+│   ├── discord/interactions/route.ts      <- Discord button callback
+│   ├── demo/reset/route.ts               <- reset demo state
+│   └── demo/run/route.ts                 <- trigger demo scenario
 ├── lib/
-│   ├── db.ts                              ← redis client wrapper
-│   ├── signals/{structural,temporal,behavioral}.ts
-│   ├── score.ts
-│   ├── slack.ts
-│   └── sse-events.ts                      ← typed event shapes
+│   ├── db.ts                              <- Redis client wrapper
+│   ├── discord.ts                         <- Discord REST API helpers
+│   ├── signals/
+│   │   ├── structural.ts                     10 structural signal detectors
+│   │   ├── behavioral.ts                     3 behavioral signal detectors
+│   │   └── temporal.ts                       3 temporal signal detectors
+│   ├── score.ts                           <- weighted scoring + compound triples
+│   ├── cost-meter.ts                      <- budget tracking
+│   ├── file-classifier.ts                <- file -> area classification
+│   ├── critical-paths.ts                 <- critical path definitions
+│   └── sse-events.ts                      <- typed SSE event shapes
 ├── workflows/
-│   ├── watchdog.ts                        ← top-level "use workflow"
-│   ├── synthesizer.ts                     ← DurableAgent verdict builder
-│   ├── investigators/{trace,runtime,history,dependency,diff}.ts
-│   └── steps/{ingest,extract-signals,score,summarize}.ts
-├── war-room/                              ← Claude Design handoff bundle (visual source of truth)
-├── docs/superpowers/specs/                ← project spec
-├── tasks/state.json                       ← stage progress (83 stages)
-└── .claude/memory.md                      ← decisions, patterns, gotchas
+│   ├── watchdog.ts                        <- top-level "use workflow"
+│   ├── synthesizer.ts                     <- DurableAgent verdict builder
+│   ├── investigators/
+│   │   ├── _base.ts                          shared investigator base
+│   │   ├── trace.ts, runtime.ts              observability inspectors
+│   │   ├── history.ts                        git history inspector
+│   │   ├── dependency.ts                     SBOM diff inspector
+│   │   └── diff.ts                           AST/code diff inspector
+│   └── steps/
+│       ├── ingest.ts                         Octokit commit fetch
+│       ├── extract-signals.ts                signal pipeline
+│       ├── score.ts                          risk scoring
+│       └── summarize.ts                      TL;DR generation
+├── data/
+│   ├── seed-history.ts                    <- seed 90 historical deploys
+│   └── preview-staged.ts                  <- validate demo scenario scores
+├── scripts/
+│   ├── reset-demo.sh                      <- idempotent demo reset
+│   ├── full-demo-rehearsal.sh             <- 5-phase rehearsal script
+│   └── chaos-drill.sh                     <- 7-phase WDK durability test
+├── demo/
+│   └── script.md                          <- 3-minute recording script
+└── war-room/                              <- Claude Design handoff (visual source)
 ```
+
+## The WDK durability story
+
+This is the core of the submission. Every part of Bridge's investigation pipeline is a durable workflow:
+
+- **`watchdog.ts`** is the top-level workflow (`"use workflow"`). It receives a GitHub push, scores it, and if risky, dispatches investigators.
+- **Each investigator** (`trace`, `runtime`, `history`, `dependency`, `diff`) is a `DurableAgent` sub-workflow. If the function instance dies mid-investigation, it resumes from the last completed step.
+- **The synthesizer** collapses all findings into a verdict, posts it to Discord with action buttons, then **pauses the workflow** using WDK's `signal/wait` primitive.
+- **The workflow stays paused** — surviving redeploys, cold starts, and server restarts — until a human clicks a button in Discord. The interaction webhook writes the signal to KV, and the workflow resumes.
+
+The **chaos drill** (`scripts/chaos-drill.sh`) proves this: it kills the dev server mid-investigation, restarts it, and verifies the workflow picks up where it left off. That is the test that makes the WDK pitch real.
 
 ## Verification
 
-The project follows a 4-tier verify protocol per stage (defined in `docs/superpowers/specs/...md` §Verify-Block Conventions):
-
-- **Tier 1 — Build:** `npx tsc --noEmit -p tsconfig.json`
-- **Tier 2 — Simplify:** runs once before each commit on changed files (project override)
-- **Tier 3 — Unit:** behavior tests via `npx tsx --input-type=module -e "..."`
-- **Tier 4 — Integration:** spins up `next dev` on `:3030`, hits real endpoints, asserts on KV state and SSE stream contents
-
 ```bash
-npm run lint                    # ESLint
-npx tsc --noEmit                # type-check
+npx tsc --noEmit                # type-check (0 errors)
 npx next build                  # production build
 ```
 
-Each stage's verify blocks are inlined in the spec (search for `# tier1_build`).
+Each of the 83 stages in the spec has inline verify blocks (search `docs/superpowers/specs/` for `# tier1_build`).
 
 ## Deployment
 
 ```bash
-vercel --prod                   # deploy
+vercel --prod
 ```
 
-The Vercel dashboard auto-redeploys on every push to `main` once GitHub integration is enabled.
+Auto-redeploys on every push to `main` once the Vercel GitHub integration is enabled.
 
-## Status / roadmap
+## Status
 
-| Task | Status | Stages |
+| Task | Description | Status |
 |---|---|---|
-| T0 — Setup | Complete | 13/13 |
-| T1 — Backend skeleton | In progress | 0/5 |
-| T2 — Pipeline backbone | Pending | 0/18 |
-| T3 — Wire war-room to live | Pending | 0/3 |
-| T4 — Investigators + synthesizer | Pending | 0/8 |
-| T5 — Slack pause/resume | Pending | 0/7 |
-| T6 — Seed history + 3 scenarios | Pending | 0/9 |
-| T7 — System-area heatmap | Pending | 0/3 |
-| T8 — Demo polish + chaos drill | Pending | 0/10 |
-| T9 — Record demo video | Pending | 0/3 |
-| T10 — Submission | Pending | 0/4 |
+| T0 | Setup + scaffold | Complete |
+| T1 | Backend skeleton (webhook, SSE, KV) | Complete |
+| T2 | Signal pipeline (structural, behavioral, temporal, scoring) | Complete |
+| T3 | Wire war-room to live data | Complete |
+| T4 | Investigators + synthesizer | Complete |
+| T5 | Discord pause/resume | Complete |
+| T6 | Seed history + 3 demo scenarios | Complete |
+| T7 | System-area heatmap | Complete |
+| T8 | Demo polish + cinematic + chaos drill | Complete |
+| T9 | Record demo video | Pending (human task) |
+| T10 | Submission | Pending (human task) |
 
-**Stages complete: 13 / 83.** Current cursor: `T1.1.1` (GitHub webhook receiver).
-
-## Hackathon context
-
-Submitted to the Vercel Workflow Development Kit (WDK) track. The hackathon timeline assumes ~22 hours from spec authoring to submission; this README is the **primary paper deliverable** since live demos are not guaranteed (judges may select winners from submissions alone).
-
-The real proof of the WDK durability claim is `T8.1.10`'s **chaos drill**: kill `next dev` mid-investigation, restart, verify the workflow resumes from KV. The chaos drill is included in the demo video.
+**All code stages complete.** Remaining work is recording the demo video and submitting.
 
 ## Credits
 
 - **Vercel** — Workflow Development Kit, AI Gateway, Vercel Marketplace Redis, hosting
 - **Anthropic** — Claude Sonnet 4.6 (synthesizer + diff inspector)
-- **Slack** — Web API + Block Kit
+- **Discord** — bot API + interaction webhook
 - **Octokit** — GitHub API client
 - **Claude Design** — visual prototype handoff (`war-room/`)
 
-Built solo for the Vercel community hackathon, May 2026. The fictional `Meridian Bank` framing is for demo narrative only — no actual bank, customer, or wire transfer is involved at any point.
+Built solo for the Vercel community hackathon, May 2026. The fictional `Meridian Bank` framing is for demo narrative only — no actual bank, customer, or wire transfer is involved.
 
 ## License
 
