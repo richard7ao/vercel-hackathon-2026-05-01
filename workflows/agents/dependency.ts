@@ -29,15 +29,18 @@ export async function dependencyAgent(
 ): Promise<InvestigatorResult> {
   await emitInvestigatorEvent(input.deploy_id, "dependency", "dispatched");
 
+  let agentText = "";
   try {
     const agent = new DurableAgent({
       model: () => Promise.resolve(getGateway().chatModel("anthropic/claude-sonnet-4-6")),
       instructions:
-        "You are a dependency investigator. Analyze package.json changes to identify supply-chain risks from new or modified dependencies.",
+        "You are a dependency investigator. Analyze package.json changes to identify supply-chain risks from new or modified dependencies. Produce a severity assessment: critical, high, medium, or low.",
       tools: { analyzeManifestDelta },
     });
 
-    const writable = new WritableStream({ write() {} });
+    const writable = new WritableStream({
+      write(chunk) { if (typeof chunk === "string") agentText += chunk; },
+    });
     await agent.stream({
       messages: [
         {
@@ -51,5 +54,21 @@ export async function dependencyAgent(
     console.warn("[dependencyAgent] DurableAgent failed, falling back:", err);
   }
 
-  return dependencyDeterministic(input);
+  if (agentText.length > 20) {
+    const severities = ["critical", "high", "medium", "low"] as const;
+    const match = severities.find((s) => agentText.toLowerCase().includes(s));
+    if (match) {
+      const result: InvestigatorResult = {
+        agent: "dependency",
+        status: "complete" as const,
+        finding: { severity: match, summary: agentText.slice(0, 500).trim() },
+      };
+      await emitInvestigatorEvent(input.deploy_id, "dependency", "complete", undefined, result.finding);
+      return result;
+    }
+  }
+
+  const fallback = await dependencyDeterministic(input);
+  await emitInvestigatorEvent(input.deploy_id, "dependency", fallback.status, undefined, fallback.finding);
+  return fallback;
 }

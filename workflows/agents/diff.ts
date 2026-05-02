@@ -29,15 +29,18 @@ export async function diffAgent(
 ): Promise<InvestigatorResult> {
   await emitInvestigatorEvent(input.deploy_id, "diff", "dispatched");
 
+  let agentText = "";
   try {
     const agent = new DurableAgent({
       model: () => Promise.resolve(getGateway().chatModel("anthropic/claude-sonnet-4-6")),
       instructions:
-        "You are a code-diff investigator. Analyze patches for security risks: eval(), exec(), auth bypasses, hardcoded secrets, XSS vectors.",
+        "You are a code-diff investigator. Analyze patches for security risks: eval(), exec(), auth bypasses, hardcoded secrets, XSS vectors. Produce a severity assessment: critical, high, medium, or low.",
       tools: { summarizeDiffChunks },
     });
 
-    const writable = new WritableStream({ write() {} });
+    const writable = new WritableStream({
+      write(chunk) { if (typeof chunk === "string") agentText += chunk; },
+    });
     await agent.stream({
       messages: [
         {
@@ -51,5 +54,21 @@ export async function diffAgent(
     console.warn("[diffAgent] DurableAgent failed, falling back:", err);
   }
 
-  return diffDeterministic(input);
+  if (agentText.length > 20) {
+    const severities = ["critical", "high", "medium", "low"] as const;
+    const match = severities.find((s) => agentText.toLowerCase().includes(s));
+    if (match) {
+      const result: InvestigatorResult = {
+        agent: "diff",
+        status: "complete" as const,
+        finding: { severity: match, summary: agentText.slice(0, 500).trim() },
+      };
+      await emitInvestigatorEvent(input.deploy_id, "diff", "complete", undefined, result.finding);
+      return result;
+    }
+  }
+
+  const fallback = await diffDeterministic(input);
+  await emitInvestigatorEvent(input.deploy_id, "diff", fallback.status, undefined, fallback.finding);
+  return fallback;
 }
