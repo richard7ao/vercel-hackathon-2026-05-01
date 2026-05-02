@@ -45,8 +45,8 @@ export function VerdictModal({
   return (
     <div className="verdict">
       <div className="verdict-head">
-        <span>
-          SYNTHESIZER VERDICT // dep_{depLabel}
+        <span className="verdict-head-title" title={`SYNTHESIZER VERDICT // dep_${depLabel}`}>
+          {`SYNTHESIZER VERDICT // dep_${depLabel}`}
         </span>
         {acked ? (
           <span className="verdict-badge verdict-badge-acked">

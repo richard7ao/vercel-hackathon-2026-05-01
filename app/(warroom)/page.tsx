@@ -76,7 +76,13 @@ export default function WarRoom() {
     data.verdict && (data.mode !== "live" || !liveVerdictDismissed) ? data.verdict : null;
 
   return (
-    <div className="shell">
+    <div
+      className={
+        data.mode === "live" && boardDockOpen
+          ? "shell shell--board-rehearsal"
+          : "shell"
+      }
+    >
       <TopBar
         activeDeploy={data.activeDeploy}
         mode={data.mode}

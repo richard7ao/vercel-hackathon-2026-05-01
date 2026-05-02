@@ -305,7 +305,8 @@ html, body {
 }
 .timeline-side.right { border-right: 0; border-left: 1px solid var(--line); align-items: flex-end; }
 .timeline-side .v { color: var(--fg); font-weight: 600; font-size: 12px; letter-spacing: 0.05em; }
-.timeline-canvas { position: relative; overflow: hidden; }
+/* visible so deploy dot tooltips (z-index 115) paint above the grid, not clipped */
+.timeline-canvas { position: relative; overflow: visible; }
 .timeline-canvas svg { width: 100%; height: 100%; display: block; }
 .timeline-tooltip {
   position: absolute;
@@ -314,7 +315,7 @@ html, body {
   padding: 6px 10px;
   font-size: 10px;
   pointer-events: none;
-  z-index: 10;
+  z-index: 115;
   min-width: 180px;
   transform: translate(-50%, calc(-100% - 8px));
   box-shadow: 0 0 0 1px rgba(0,0,0,0.5);
@@ -613,6 +614,8 @@ html, body {
 .threats::-webkit-scrollbar { width: 6px; }
 .threats::-webkit-scrollbar-thumb { background: var(--line-2); }
 .threat {
+  position: relative;
+  z-index: 0;
   display: grid;
   grid-template-columns: 14px 1fr auto;
   gap: 10px;
@@ -622,7 +625,10 @@ html, body {
   cursor: pointer;
   transition: background 0.08s;
 }
-.threat:hover { background: var(--bg-1); }
+.threat:hover {
+  background: var(--bg-1);
+  z-index: 15;
+}
 .threat .sev-dot { width: 8px; height: 8px; margin-top: 5px; }
 .threat[data-sev="critical"] .sev-dot { background: var(--red); box-shadow: 0 0 8px var(--red); animation: pulse-dot 0.9s ease-in-out infinite; }
 .threat[data-sev="high"] .sev-dot { background: var(--orange); box-shadow: 0 0 6px var(--orange); }
@@ -652,23 +658,32 @@ html, body {
 /* ========== Verdict modal ========== */
 .verdict {
   position: fixed;
-  right: 24px; bottom: 80px;
-  width: 460px;
-  max-height: calc(100vh - 160px);
+  right: 24px;
+  bottom: 120px;
+  width: min(460px, calc(100vw - 48px));
+  max-height: calc(100vh - 180px);
   overflow-y: auto;
   background: var(--bg-1);
   border: 1px solid var(--red-dim);
-  z-index: 50;
+  /* Above demo-ctrl (103), rehearsal dock (102), panels, and threat hovers */
+  z-index: 110;
   font-size: 12px;
   box-shadow: 0 0 0 1px rgba(255,51,68,0.2), 0 24px 60px rgba(0,0,0,0.85);
   animation: verdict-in 280ms cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+.shell.shell--board-rehearsal .verdict {
+  bottom: 200px;
+  max-height: calc(100vh - 260px);
 }
 @keyframes verdict-in {
   0%   { transform: translateX(40px) scale(0.97); opacity: 0; }
   100% { transform: translateX(0) scale(1); opacity: 1; }
 }
 .verdict-head {
-  display: flex; justify-content: space-between; align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px 12px;
+  align-items: center;
   padding: 10px 14px;
   background: rgba(255,51,68,0.08);
   border-bottom: 1px solid var(--red-dim);
@@ -678,12 +693,32 @@ html, body {
   text-transform: uppercase;
   font-weight: 700;
 }
+.verdict-head-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.verdict-badge {
+  white-space: nowrap;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  max-width: 42vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .verdict-head .x {
   color: var(--fg-mute);
   cursor: pointer;
-  background: none; border: 0;
+  background: none;
+  border: 0;
   font-family: var(--mono);
   font-size: 12px;
+  white-space: nowrap;
+  justify-self: end;
+  padding: 4px 6px;
+  line-height: 1;
+  flex-shrink: 0;
 }
 .verdict-head .x:hover { color: var(--fg); }
 .verdict-body { padding: 14px; }
@@ -781,6 +816,10 @@ html, body {
   max-width: min(520px, calc(100vw - 28px));
   z-index: 103;
 }
+/* Lift corner controls above board rehearsal dock so they do not merge with the strip */
+.shell.shell--board-rehearsal .demo-ctrl {
+  bottom: 118px;
+}
 
 /* Board rehearsal — slim strip; dashboard (grid) stays visible above */
 .rehearsal-dock {
@@ -854,8 +893,13 @@ html, body {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  padding: 8px 200px 8px 14px;
+  /* Room for fixed demo-ctrl (above dock when shell--board-rehearsal); avoid overlap */
+  padding: 10px 14px 12px;
+  padding-right: max(14px, min(200px, 28vw));
   border-top: 1px solid var(--line);
+}
+.shell.shell--board-rehearsal .rehearsal-dock-foot {
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
 }
 .rehearsal-dock-summary {
   color: var(--green);
