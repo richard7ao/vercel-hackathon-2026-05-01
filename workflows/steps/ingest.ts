@@ -8,7 +8,7 @@ type IngestInput = {
   sha: string;
 };
 
-type FileChange = {
+export type FileChange = {
   path: string;
   additions: number;
   deletions: number;
@@ -16,7 +16,7 @@ type FileChange = {
   status: string;
 };
 
-type IngestResult = {
+export type IngestResult = {
   files: FileChange[];
   commit_message: string;
   author: string;
