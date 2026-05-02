@@ -3,7 +3,7 @@
   "last_updated": "2026-05-02T01:38:28.734Z",
   "current_task": "T5",
   "current_step": "T5.1",
-  "current_stage": "T5.1.6",
+  "current_stage": "T5.1.7",
   "tasks": {
     "T0": {
       "status": "complete",
@@ -315,9 +315,9 @@
           "status": "in_progress",
           "stages": {
             "T5.1.1": {
-              "status": "pending",
-              "completed_at": null,
-              "note": "Discord credentials needed from user"
+              "status": "complete",
+              "completed_at": "2026-05-02T09:30:00.000Z",
+              "note": "Discord bot created, invited to Vercel Hackathon -Meridian server"
             },
             "T5.1.2": {
               "status": "complete",
@@ -340,8 +340,8 @@
               "note": "WDK signal/wait pause — KV-based polling, durable across restart"
             },
             "T5.1.6": {
-              "status": "pending",
-              "completed_at": null
+              "status": "complete",
+              "completed_at": "2026-05-02T09:35:00.000Z"
             },
             "T5.1.7": {
               "status": "pending",

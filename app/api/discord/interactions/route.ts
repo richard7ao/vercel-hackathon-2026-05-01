@@ -24,14 +24,28 @@ export async function POST(req: NextRequest) {
     const [action, deployId] = customId.split(":");
     const user = body.member?.user?.username ?? body.user?.username ?? "unknown";
 
+    const userId =
+      body.member?.user?.id ?? body.user?.id ?? "unknown";
+
     if (!deployId || !["ack", "hold"].includes(action)) {
-      return NextResponse.json({ type: 4, data: { content: "Unknown action." } });
+      return NextResponse.json({
+        type: 4,
+        data: { content: "Unknown action." },
+      });
     }
+
+    const ts = new Date().toISOString();
 
     await kv.set(`pause_state:${deployId}`, {
       action,
       user,
-      ts: new Date().toISOString(),
+      ts,
+    });
+
+    await kv.set(`signal:slack:ack:${deployId}`, {
+      action_type: action,
+      user: { id: userId, username: user },
+      ts,
     });
 
     const msg =
