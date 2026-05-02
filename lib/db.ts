@@ -13,6 +13,22 @@
 
 import { createClient, type RedisClientType } from "redis";
 
+const MAX_KEY_LENGTH = 256;
+const MAX_VALUE_BYTES = 5_000_000; // 5 MB
+const VALID_KEY_RE = /^[a-zA-Z0-9_:\-./]+$/;
+
+function validateKey(key: string): void {
+  if (!key || key.length > MAX_KEY_LENGTH) {
+    throw new Error(`Invalid key length: ${key.length}`);
+  }
+  if (!VALID_KEY_RE.test(key)) {
+    throw new Error(`Invalid key characters: ${key}`);
+  }
+  if (key.includes("..")) {
+    throw new Error(`Path traversal in key: ${key}`);
+  }
+}
+
 let client: RedisClientType | null = null;
 
 async function getClient(): Promise<RedisClientType> {
@@ -27,11 +43,17 @@ async function getClient(): Promise<RedisClientType> {
 
 export const kv = {
   async set(key: string, value: unknown): Promise<void> {
+    validateKey(key);
+    const serialized = JSON.stringify(value);
+    if (serialized.length > MAX_VALUE_BYTES) {
+      throw new Error(`Value too large: ${serialized.length} bytes (max ${MAX_VALUE_BYTES})`);
+    }
     const c = await getClient();
-    await c.set(key, JSON.stringify(value));
+    await c.set(key, serialized);
   },
 
   async get<T = unknown>(key: string): Promise<T | null> {
+    validateKey(key);
     const c = await getClient();
     const raw = await c.get(key);
     if (raw === null) return null;
@@ -39,6 +61,7 @@ export const kv = {
   },
 
   async list(prefix: string): Promise<string[]> {
+    validateKey(prefix.replace(/\*$/, "") || "a");
     const c = await getClient();
     const keys: string[] = [];
     for await (const key of c.scanIterator({
@@ -52,6 +75,7 @@ export const kv = {
   },
 
   async del(key: string): Promise<void> {
+    validateKey(key);
     const c = await getClient();
     await c.del(key);
   },

@@ -2,10 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyInteraction, respondToInteraction } from "@/lib/discord";
 import { kv } from "@/lib/db";
 
+const MAX_BODY_BYTES = 100_000;
+
 export async function POST(req: NextRequest) {
+  const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
+  if (contentLength > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+  }
+
   const signature = req.headers.get("x-signature-ed25519") ?? "";
   const timestamp = req.headers.get("x-signature-timestamp") ?? "";
   const rawBody = await req.text();
+
+  if (rawBody.length > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+  }
 
   if (!verifyInteraction(rawBody, signature, timestamp)) {
     return NextResponse.json({ error: "invalid signature" }, { status: 401 });
@@ -27,7 +38,8 @@ export async function POST(req: NextRequest) {
     const userId =
       body.member?.user?.id ?? body.user?.id ?? "unknown";
 
-    if (!deployId || !["ack", "hold"].includes(action)) {
+    const DEPLOY_ID_RE = /^[a-zA-Z0-9_\-]{1,64}$/;
+    if (!deployId || !DEPLOY_ID_RE.test(deployId) || !["ack", "hold"].includes(action)) {
       return NextResponse.json({
         type: 4,
         data: { content: "Unknown action." },

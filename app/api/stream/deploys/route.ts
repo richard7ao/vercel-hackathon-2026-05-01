@@ -7,6 +7,9 @@ export async function GET() {
   let lastSeenKeys = new Set<string>();
 
   const stream = new ReadableStream({
+    cancel() {
+      // Cleanup handled by heartbeat catch below
+    },
     async start(controller) {
       controller.enqueue(encoder.encode(": connected\n\n"));
 
@@ -74,9 +77,9 @@ export async function GET() {
 
           lastSeenKeys = new Set([
             ...currentKeys,
-            ...(await kv.list("verdicts:")),
-            ...(await kv.list("investigator:")),
-            ...(await kv.list("threats:")),
+            ...verdictKeys,
+            ...investigatorKeys,
+            ...threatKeys,
           ]);
         } catch (err) {
           controller.enqueue(
@@ -91,16 +94,12 @@ export async function GET() {
 
       const interval = setInterval(poll, 1000);
 
-      const cleanup = () => clearInterval(interval);
-      controller.enqueue(encoder.encode(""));
-
-      // Keep connection alive with heartbeat
       const heartbeat = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(": heartbeat\n\n"));
         } catch {
           clearInterval(heartbeat);
-          cleanup();
+          clearInterval(interval);
         }
       }, 15000);
     },

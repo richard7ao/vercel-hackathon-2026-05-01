@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { execSync } from "child_process";
 import { resolve } from "path";
+import { timingSafeEqual } from "crypto";
+
+function safeTokenCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get("authorization")?.replace("Bearer ", "");
-  if (!token || token !== process.env.DEMO_RESET_TOKEN) {
+  const expected = process.env.DEMO_RESET_TOKEN;
+  if (!token || !expected || !safeTokenCompare(token, expected)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

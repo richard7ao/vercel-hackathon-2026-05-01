@@ -213,6 +213,8 @@ export function useDeploysSSE() {
           summary: liveState.verdict.summary,
           concerns: liveState.verdict.concerns,
           action: liveState.verdict.suggested_action,
+          suggested_action: liveState.verdict.suggested_action,
+          acknowledged: false,
         }
       : null,
     setVerdict: () => {},

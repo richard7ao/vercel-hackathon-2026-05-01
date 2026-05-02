@@ -51,7 +51,13 @@ export default function WarRoom() {
 
       <VerdictModal
         verdict={data.verdict}
-        onClose={() => data.setVerdict(null)}
+        onClose={() => {
+          if (data.verdict && !data.verdict.acknowledged) {
+            data.setVerdict({ ...data.verdict, acknowledged: true, acknowledged_by: "you" });
+          } else {
+            data.setVerdict(null);
+          }
+        }}
       />
 
       <div className="demo-ctrl">

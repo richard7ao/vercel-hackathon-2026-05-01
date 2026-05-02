@@ -452,7 +452,8 @@ export function useDemo(mode: "demo" | "live" = "demo") {
 
     at(18, () => {
       setVerdict({
-        level: "CRITICAL",
+        level: "critical",
+        deploy_id_short: "048",
         summary:
           "Synthesizer collapses 5 inspector findings into a high-confidence verdict: this push contains an unannounced exfil channel inside the auth path, authored by a contributor with no prior history in this code area.",
         concerns: [
@@ -462,6 +463,9 @@ export function useDemo(mode: "demo" | "live" = "demo") {
         ],
         action:
           "Hold the deploy at 0% rollout. Page @oncall-security. Open incident channel and request a forced-revert.",
+        suggested_action:
+          "Hold the deploy at 0% rollout. Page @oncall-security. Open incident channel and request a forced-revert.",
+        acknowledged: false,
       });
       pushFeed({
         severity: "critical",

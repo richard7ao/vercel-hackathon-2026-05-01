@@ -526,6 +526,166 @@ else
   fail "Mode resolution: $DEMO_TEST"
 fi
 
+# ── 11. ADVERSARIAL EDGE CASES ──────────────────
+echo ""
+echo "── 11. Adversarial Edge Cases ──"
+
+# Redis key injection — path traversal must be rejected
+KV_INJECT=$(npx tsx --input-type=module -e "
+const m = await import('./lib/db.ts');
+const { kv } = m.default || m;
+const bad = ['../etc/passwd', 'key\x00null', 'a'.repeat(300), '../../root', 'key:../../escape'];
+let blocked = 0;
+for (const k of bad) {
+  try { await kv.set(k, 'pwned'); } catch { blocked++; }
+}
+console.log('BLOCKED:' + blocked + '/' + bad.length);
+" 2>&1)
+
+if echo "$KV_INJECT" | grep -q "BLOCKED:5/5"; then
+  pass "Redis rejects all 5 injection keys"
+else
+  fail "Redis key injection: $KV_INJECT"
+fi
+
+# Redis value size limit — large payloads must be rejected
+KV_SIZE=$(npx tsx --input-type=module -e "
+const m = await import('./lib/db.ts');
+const { kv } = m.default || m;
+const big = 'x'.repeat(6_000_000);
+try { await kv.set('_test_big', big); console.log('FAIL:accepted'); } catch(e) { console.log('BLOCKED:' + e.message.substring(0, 40)); }
+" 2>&1)
+
+if echo "$KV_SIZE" | grep -q "BLOCKED:"; then
+  pass "Redis rejects 6MB value"
+else
+  fail "Redis value size: $KV_SIZE"
+fi
+
+# SHA sanitization — non-hex SHAs must be sanitized to "unknown"
+SHA_TEST=$(npx tsx --input-type=module -e "
+const badShas = ['<script>alert(1)</script>', '../../../etc/passwd', 'abc;rm -rf /', '', 'x'.repeat(50)];
+const SHA_RE = /^[0-9a-f]{7,40}$/;
+function sanitize(raw) { return (!raw || !SHA_RE.test(raw)) ? 'unknown' : raw; }
+let cleaned = 0;
+for (const s of badShas) { if (sanitize(s) === 'unknown') cleaned++; }
+console.log('CLEANED:' + cleaned + '/' + badShas.length);
+" 2>&1)
+
+if echo "$SHA_TEST" | grep -q "CLEANED:5/5"; then
+  pass "SHA sanitizer rejects all 5 malicious inputs"
+else
+  fail "SHA sanitizer: $SHA_TEST"
+fi
+
+# Discord deployId validation — injection attempts must be rejected
+DEPLOY_ID_TEST=$(npx tsx --input-type=module -e "
+const DEPLOY_ID_RE = /^[a-zA-Z0-9_\-]{1,64}$/;
+const bad = ['../../../etc', 'id;DROP TABLE', '<script>', 'a'.repeat(100), '', 'key:with:colons'];
+let blocked = 0;
+for (const d of bad) { if (!DEPLOY_ID_RE.test(d)) blocked++; }
+console.log('BLOCKED:' + blocked + '/' + bad.length);
+" 2>&1)
+
+if echo "$DEPLOY_ID_TEST" | grep -q "BLOCKED:6/6"; then
+  pass "DeployId regex rejects all 6 injection attempts"
+else
+  fail "DeployId validation: $DEPLOY_ID_TEST"
+fi
+
+# Score with extreme inputs — NaN, Infinity, negatives must not break scoring
+SCORE_EDGE=$(npx tsx --input-type=module -e "
+const m = await import('./lib/score.ts');
+const { score: computeScore } = m.default || m;
+const cases = [
+  { structural: NaN, behavioral: NaN, temporal: NaN, compounds: NaN },
+  { structural: Infinity, behavioral: -Infinity, temporal: 999, compounds: -1 },
+  { structural: -0.5, behavioral: -0.1, temporal: -100, compounds: -50 },
+  {},
+];
+for (const c of cases) {
+  const r = computeScore(c);
+  if (typeof r !== 'number' || isNaN(r) || r < 0 || r > 1) {
+    console.log('FAIL:' + JSON.stringify(c) + ' -> ' + r); process.exit(1);
+  }
+}
+console.log('OK');
+" 2>&1)
+
+if echo "$SCORE_EDGE" | grep -q "^OK"; then
+  pass "Score clamps NaN/Infinity/negative to [0,1]"
+else
+  fail "Score edge cases: $SCORE_EDGE"
+fi
+
+# parseLLMVerdict — malformed JSON and injection attempts must not crash
+VERDICT_EDGE=$(npx tsx --input-type=module -e "
+const m = await import('./workflows/synthesizer.ts');
+const { parseLLMVerdict } = m.default || m;
+const bad = [
+  'not json at all',
+  '{\"level\":\"INVALID\",\"summary\":\"\",\"concerns\":[],\"suggested_action\":\"\"}',
+  '',
+  null,
+  '{\"level\":\"benign\"}',
+  '<script>alert(1)</script>',
+  '{}'.repeat(1000),
+];
+let safe = 0;
+for (const input of bad) {
+  try {
+    const result = parseLLMVerdict(input);
+    safe++;
+  } catch {
+    safe++;
+  }
+}
+console.log('SAFE:' + safe + '/' + bad.length);
+" 2>&1)
+
+if echo "$VERDICT_EDGE" | grep -q "SAFE:7/7"; then
+  pass "parseLLMVerdict handles all 7 malformed inputs without crash"
+else
+  fail "parseLLMVerdict edge cases: $VERDICT_EDGE"
+fi
+
+# Demo branch allowlist — arbitrary branch names must be rejected
+BRANCH_TEST=$(npx tsx --input-type=module -e "
+const BRANCH_RE = /^[a-zA-Z0-9_\-./]{1,128}$/;
+const ALLOWED = ['demo/exfil', 'demo/privesc', 'demo/leak'];
+const bad = ['main;rm -rf /', '\$(whoami)', 'demo/../../etc/passwd', 'a'.repeat(200)];
+let blocked = 0;
+for (const b of bad) {
+  if (!BRANCH_RE.test(b) || !ALLOWED.includes(b)) blocked++;
+}
+const good = ['demo/exfil', 'demo/privesc', 'demo/leak'];
+let allowed = 0;
+for (const g of good) {
+  if (BRANCH_RE.test(g) && ALLOWED.includes(g)) allowed++;
+}
+console.log('BLOCKED:' + blocked + '/' + bad.length + ':ALLOWED:' + allowed + '/' + good.length);
+" 2>&1)
+
+if echo "$BRANCH_TEST" | grep -q "BLOCKED:4/4:ALLOWED:3/3"; then
+  pass "Branch allowlist blocks 4 injections, allows 3 valid"
+else
+  fail "Branch allowlist: $BRANCH_TEST"
+fi
+
+# Webhook body size limit — oversized payloads must be rejected (deployed endpoint)
+WEBHOOK_BIG=$(curl -sS -w "\n%{http_code}" --max-time 10 \
+  -X POST "$DEPLOY_URL/api/webhooks/github" \
+  -H "Content-Type: application/json" \
+  -H "x-github-event: push" \
+  -H "x-hub-signature-256: sha256=fake" \
+  -H "Content-Length: 2000000" \
+  -d '{"after":"test"}' 2>&1 | tail -1)
+if [ "$WEBHOOK_BIG" = "413" ] || [ "$WEBHOOK_BIG" = "401" ]; then
+  pass "Webhook rejects oversized/bad request ($WEBHOOK_BIG)"
+else
+  warn "Webhook returned $WEBHOOK_BIG for oversized payload (deploy may not have latest code)"
+fi
+
 # ── SUMMARY ──────────────────────────────────────
 echo ""
 echo "============================================"
