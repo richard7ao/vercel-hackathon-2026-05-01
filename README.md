@@ -6,7 +6,7 @@
 <h3 align="center">Multi-Agent Deploy Security War Room</h3>
 
 <p align="center">
-  <em>A durable multi-agent system that watches every deploy, scores it for risk, dispatches five investigator agents in parallel, synthesizes a verdict, and pauses the pipeline for human acknowledgment — all on Vercel's Workflow Development Kit.</em>
+  <em>A durable multi-agent system that watches every deploy to a <strong>mock core-banking monolith</strong>, scores it for risk, dispatches five investigator agents in parallel, synthesizes a verdict, and pauses the pipeline for human acknowledgment — all on Vercel's Workflow Development Kit (WDK). <strong>Connected to GitHub</strong> (webhooks + ingest) and <strong>Discord</strong> (verdict embeds + button interactions that <code>resumeHook</code> the workflow).</em>
 </p>
 
 <p align="center">
@@ -25,13 +25,39 @@
 ## What you see
 <img width="1795" height="1037" alt="image" src="https://github.com/user-attachments/assets/ed5df431-92f8-4eec-acf9-4d715d69db4c" />
 
-Open the [live demo](https://vercel-hackathon-2026-05-01.vercel.app) and you land on a Bloomberg-terminal-style war room. It auto-runs a 25-second simulation of a risky deploy: a new hire pushes a change to `lib/auth.ts` at 3:42 AM that adds an outbound `fetch()` to a non-allowlisted host.
+Open the [live demo](https://vercel-hackathon-2026-05-01.vercel.app) and you land on a Bloomberg-terminal-style war room. It auto-runs a **25-second** scripted incident on **Meridian Core Banking**: **dev-3**, a junior who normally only lands commits in `components/ui/`, pushes to **`lib/auth.ts`** off-hours and adds an outbound `fetch()` to a host outside the bank’s allowlist.
 
-The status block flips from **ALL CLEAR** through **MONITORING** to **CRITICAL**. Five investigator agents fan out in parallel. A DurableAgent synthesizer collapses their findings into a verdict. The workflow pauses via `createHook` for a Discord button click. The simulation loops every ~33 seconds.
+The status block flips from **ALL CLEAR** through **MONITORING** to **CRITICAL**. Five investigator agents fan out in parallel. A synthesizer collapses their findings into a verdict. The workflow pauses via **`createHook`** until a real **Discord** button interaction resumes it (`resumeHook`). The simulation loops every ~33 seconds.
 
-Toggle to **LIVE** mode (or `?live=1`) to see real GitHub webhooks flow through.
+Toggle to **LIVE** mode (or `?live=1`) to stream **real** pushes from the monitored GitHub repo through Redis into the same UI (timeline, agents, feed, heatmap).
 
 In live mode, use **TRACE VIEW** for a modal with full step traces, or **BOARD REHEARSAL** to run the same three flows (ack / hold / page) while the timeline, agents, and feed stay on screen (status strip at the bottom).
+
+---
+
+## The monitored repository (Meridian Core Banking)
+
+Bridge does **not** ship your real bank. It connects to **[Meridian Core Banking](https://github.com/richard7ao/meridian-core-banking)** — a **mock** “major bank core platform” repo used only for demos: **wires**, **auth**, **AML-flavored** paths, admin APIs, and observability-shaped code so structural and temporal signals read as high-stakes instead of generic SaaS noise.
+
+| What it is | What it is not |
+|------------|----------------|
+| A separate GitHub repo you own and attach a **push webhook** to | Production banking software or customer data |
+| Seeded **`git` history** + **`.github/CODEOWNERS`** so “novel author on critical path” is a *real* signal | A live core ledger |
+
+**Three developer voices in the story.** The war room narrative is written around a **small cast**: **dev-3** (Devin Ross — new hire, 14-day tenure, home turf `components/ui/` only) versus **two senior ownership tracks** implied by CODEOWNERS — engineers who *normally* own **`lib/auth/*`** and **`lib/wires/*`**. When dev-3 touches auth or wires, history and behavioral detectors have something true to say. Additional synthetic committers exist in seeded history for richer baselines; the **demo loop** spotlights this **trio**.
+
+By default, server and UI use **`richard7ao/meridian-core-banking`** (see `lib/monitored-repo.ts`). Override with **`MONITORED_REPO`** / **`NEXT_PUBLIC_MONITORED_REPO`** if you fork or rename the target.
+
+### Connected services
+
+Bridge is wired to **two surfaces** in production (and in full local rehearsal):
+
+| Service | Role |
+|---------|------|
+| **GitHub** | **Push webhook** → `/api/webhooks/github` starts the **watchdog** workflow; **Octokit** pulls commit metadata and patches from the monitored repo. |
+| **Discord** | **Bot REST** posts verdict embeds (with **Ack / Hold / Page** buttons) into your deploy channel; **`/api/discord/interactions`** verifies Discord’s **Ed25519** interaction headers and drives **`resumeHook`** so humans unblock the same paused WDK run the war room shows as suspended — not a fake poll loop. |
+
+Configure **`DISCORD_BOT_TOKEN`**, **`DISCORD_PUBLIC_KEY`**, **`DISCORD_CHANNEL_ID`**, and **`GITHUB_WEBHOOK_SECRET`** (see [Environment Variables](#environment-variables)).
 
 ---
 
@@ -41,7 +67,7 @@ Every team has a deploy channel where pushes go to die. A commit lands, CI goes 
 
 Bridge replaces that with a war room that **investigates pushes for you**. Not just monitors. Investigates.
 
-The interesting part is the **durability story**. Each investigator is a sub-workflow on Vercel WDK. If the function dies mid-investigation, the workflow resumes where it left off. If a human is paged and takes 40 minutes to respond, the workflow simply waits — surviving any number of cold starts and redeploys. **That is the WDK pitch made concrete.**
+The interesting part is the **durability story**. Investigator work and the top-level **watchdog** run as **Vercel WDK** workflows. If a function dies mid-investigation, the workflow resumes where it left off. If a human is paged and takes 40 minutes to respond, the workflow simply waits — surviving cold starts and redeploys until **`resumeHook`** fires. **That is the WDK pitch made concrete.**
 
 ---
 
