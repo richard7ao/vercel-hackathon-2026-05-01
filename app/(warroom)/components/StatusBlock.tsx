@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { fmtUptime, STATUS_LABELS } from "../data";
 import type { StatusState } from "../data";
+import { RiskScoreArc } from "./RiskScoreArc";
+import { useTickedNumber } from "../hooks/useTickedNumber";
 
 export function StatusBlock({
   state,
@@ -10,15 +12,16 @@ export function StatusBlock({
   deploysAnalyzed,
   agentsStanding,
   mtta,
-  lastIncident,
+  score,
 }: {
   state: StatusState;
   uptime: number;
   deploysAnalyzed: number;
   agentsStanding: number;
   mtta: string;
-  lastIncident?: string;
+  score: number;
 }) {
+  const tickedDeploys = useTickedNumber(deploysAnalyzed, 400);
   const [snap, setSnap] = useState(false);
   const prev = useRef(state);
   useEffect(() => {
@@ -57,21 +60,26 @@ export function StatusBlock({
       </div>
 
       <div className="status-center">
-        <div className={"status-state" + (snap ? " snap" : "")}>
-          <span className="bracket">[</span>
-          <span className="label">{STATUS_LABELS[state]}</span>
-          <span className="bracket">]</span>
-        </div>
-        <div className="status-sub">
-          <span>monitoring</span>
-          <span className="sep">&middot;</span>
-          <span>
-            <span className="tab-num">{deploysAnalyzed}</span> deploys analyzed
-          </span>
-          <span className="sep">&middot;</span>
-          <span className="tab-num">
-            {fmtUptime(uptime)} since last incident
-          </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "center" }}>
+          <RiskScoreArc score={score} />
+          <div>
+            <div className={"status-state" + (snap ? " snap" : "")}>
+              <span className="bracket">[</span>
+              <span className="label">{STATUS_LABELS[state]}</span>
+              <span className="bracket">]</span>
+            </div>
+            <div className="status-sub">
+              <span>monitoring</span>
+              <span className="sep">&middot;</span>
+              <span>
+                <span className="tab-num">{Math.round(tickedDeploys)}</span> deploys analyzed
+              </span>
+              <span className="sep">&middot;</span>
+              <span className="tab-num">
+                {fmtUptime(uptime)} since last incident
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 

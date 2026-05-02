@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { AgentDef, AgentState } from "../data";
+import { useTickedNumber } from "../hooks/useTickedNumber";
 
 export function AgentCard({
   def,
@@ -10,6 +11,8 @@ export function AgentCard({
   def: AgentDef;
   state: AgentState;
 }) {
+  const tickedSteps = useTickedNumber(state.steps || 0, 400);
+  const tickedTokens = useTickedNumber(state.tokens || 0, 400);
   const streamRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (streamRef.current)
@@ -34,10 +37,10 @@ export function AgentCard({
 
       <div className="agent-meta">
         <span>
-          STEPS <span className="v tab-num">{state.steps || 0}</span>
+          STEPS <span className="v tab-num">{Math.round(tickedSteps)}</span>
         </span>
         <span>
-          TOK <span className="v tab-num">{state.tokens || 0}</span>
+          TOK <span className="v tab-num">{Math.round(tickedTokens)}</span>
         </span>
         <span>
           LAT <span className="v tab-num">{state.latency || "—"}</span>
