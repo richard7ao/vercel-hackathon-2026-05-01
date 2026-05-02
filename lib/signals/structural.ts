@@ -49,6 +49,20 @@ function isComment(line: string): boolean {
   return line.startsWith("//") || line.startsWith("/*") || line.startsWith("*");
 }
 
+const AUTH_KEYWORDS = ["auth", "session", "token", "permission", "middleware"];
+
+export function detectAuthPath(file: FileInput): DetectResult {
+  const path = file.path ?? "";
+  if (!path) return { matched: false, severity: 0, evidence: [] };
+
+  const lower = path.toLowerCase();
+  const hits = AUTH_KEYWORDS.filter((kw) => lower.includes(kw));
+  if (hits.length === 0) return { matched: false, severity: 0, evidence: [] };
+
+  const severity = Math.min(0.3 + hits.length * 0.25, 1.0);
+  return { matched: true, severity, evidence: [] };
+}
+
 export function detectExternalFetch(
   file: FileInput,
   allowlist?: string[]
