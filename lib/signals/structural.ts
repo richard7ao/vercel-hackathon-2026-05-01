@@ -130,6 +130,17 @@ export type DepDetectResult = {
 
 const DEP_LINE = /^\+\s*"([^"]+)"\s*:\s*"([^"]+)"/;
 
+export function detectNewEndpoint(file: FileInput & { additions?: number; deletions?: number; status?: string }): DetectResult {
+  const path = file.path ?? "";
+  if (!path.startsWith("app/api/")) return { matched: false, severity: 0, evidence: [] };
+  if (file.status !== "added") return { matched: false, severity: 0, evidence: [] };
+  if ((file.deletions ?? 0) > 0) return { matched: false, severity: 0, evidence: [] };
+
+  const isAdmin = /\b(admin|payment|billing|wires)\b/i.test(path);
+  const severity = isAdmin ? 0.85 : 0.6;
+  return { matched: true, severity, evidence: [] };
+}
+
 export function detectNewDependency(file: FileInput): DepDetectResult {
   if (!file.path?.endsWith("package.json") || !file.patch) {
     return { matched: false, severity: 0, evidence: [] };
