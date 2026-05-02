@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { kv } from "@/lib/db";
+import { start } from "workflow/api";
+import { watchdog } from "@/workflows/watchdog";
 
 const MAX_BODY_BYTES = 1_000_000; // 1 MB
 const SHA_RE = /^[0-9a-f]{7,40}$/;
@@ -53,13 +55,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, skipped: event });
   }
 
-  const payload = JSON.parse(body) as { after?: string };
+  const payload = JSON.parse(body) as {
+    after?: string;
+    before?: string;
+    repository?: { full_name?: string };
+  };
   const sha = sanitizeSha(payload.after);
+  const repo = payload.repository?.full_name ?? process.env.MONITORED_REPO ?? "unknown/unknown";
+  const before = payload.before ?? "";
 
   try {
     await kv.set(`deploys:raw:${sha}`, JSON.parse(body));
   } catch (err) {
     console.error("[webhook] KV write failed:", err);
+  }
+
+  try {
+    await start(watchdog, [{ sha, repo, before, after: sha }]);
+  } catch (err) {
+    console.warn("[webhook] workflow start failed:", err);
   }
 
   return NextResponse.json({ ok: true, sha });
