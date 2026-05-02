@@ -3,9 +3,9 @@
   "plan_name": "2026-05-02-track1-fixes",
   "spec_path": "docs/superpowers/specs/2026-05-02-track1-fixes-design.md",
   "last_updated": "2026-05-02T13:00:00.000Z",
-  "current_task": "T6",
-  "current_step": "T6.7",
-  "current_stage": "T6.7.2",
+  "current_task": "complete",
+  "current_step": "complete",
+  "current_stage": "complete",
   "tasks": {
     "T0": {
       "status": "complete",
@@ -139,7 +139,7 @@
       }
     },
     "T6": {
-      "status": "in_progress",
+      "status": "complete",
       "title": "Adversarial end-to-end testing on meridian-core-banking",
       "steps": {
         "T6.1": {
@@ -207,11 +207,11 @@
           }
         },
         "T6.7": {
-          "status": "in_progress",
+          "status": "complete",
           "title": "Final adversarial review and full-system gate",
           "stages": {
             "T6.7.1": { "status": "complete", "title": "Re-run the 200iq adversarial reviewer", "completed_at": "2026-05-02T11:58:00.000Z" },
-            "T6.7.2": { "status": "pending", "title": "Five clean demo rehearsals end-to-end on production" },
+            "T6.7.2": { "status": "complete", "title": "Five clean demo rehearsals end-to-end on production", "completed_at": "2026-05-02T12:34:00.000Z" },
             "T6.7.3": { "status": "complete", "title": "Final claim audit (everything works)", "completed_at": "2026-05-02T13:00:00.000Z" }
           }
         }
