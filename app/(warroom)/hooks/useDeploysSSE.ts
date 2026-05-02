@@ -81,14 +81,26 @@ export function reducer(state: WarRoomState, event: SSEEvent): WarRoomState {
   }
 }
 
+export function resolveInitialMode(input: {
+  search: string;
+  localStorageMode: string | null;
+}): "demo" | "live" {
+  const params = new URLSearchParams(input.search);
+  const urlLive = params.get("live");
+  if (urlLive === "1") return "live";
+  if (urlLive === "0") return "demo";
+  if (input.localStorageMode === "live") return "live";
+  if (input.localStorageMode === "demo") return "demo";
+  return "demo";
+}
+
 export function useDeploysSSE() {
   const [mode, setModeState] = useState<"demo" | "live">(() => {
     if (typeof window === "undefined") return "demo";
-    const stored = localStorage.getItem("bridge.mode");
-    if (stored === "live") return "live";
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("live") === "1") return "live";
-    return "demo";
+    return resolveInitialMode({
+      search: window.location.search,
+      localStorageMode: localStorage.getItem("bridge.mode"),
+    });
   });
 
   const [liveState, dispatch] = useReducer(reducer, initialState);

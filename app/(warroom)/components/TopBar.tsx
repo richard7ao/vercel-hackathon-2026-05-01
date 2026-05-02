@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { Deploy } from "../data";
+import { ModeToggle } from "./ModeToggle";
 
 const REPO = process.env.NEXT_PUBLIC_MONITORED_REPO || "meridian/core-banking";
 
@@ -14,9 +15,13 @@ type WorkflowInfo = {
 export function TopBar({
   activeDeploy,
   workflow,
+  mode,
+  onModeToggle,
 }: {
   activeDeploy: Deploy | null;
   workflow?: WorkflowInfo | null;
+  mode?: "demo" | "live";
+  onModeToggle?: () => void;
 }) {
   const [t, setT] = useState(new Date());
   useEffect(() => {
@@ -62,10 +67,11 @@ export function TopBar({
             runtime
           </span>
         )}
-        <span className="live-badge">
-          <span className="live-dot pulse" />
-          LIVE
-        </span>
+        <ModeToggle
+          mode={mode ?? "demo"}
+          sseStatus={mode === "live" ? "connected" : "idle"}
+          onToggle={onModeToggle}
+        />
         <span className="clock tab-num">
           {date} {utc} UTC
         </span>

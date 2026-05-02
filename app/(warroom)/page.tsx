@@ -10,13 +10,21 @@ import { SystemHeatmap } from "./components/SystemHeatmap";
 import { ThreatPanel } from "./components/ThreatPanel";
 import { VerdictModal } from "./components/VerdictModal";
 import { CountdownChip } from "./components/CountdownChip";
+import { SuspendedOverlay } from "./components/SuspendedOverlay";
+import { ResumePulse } from "./components/ResumePulse";
 
 export default function WarRoom() {
   const data = useDeploysSSE();
 
   return (
     <div className="shell">
-      <TopBar activeDeploy={data.activeDeploy} />
+      <TopBar
+        activeDeploy={data.activeDeploy}
+        mode={data.mode}
+        onModeToggle={() =>
+          data.setMode(data.mode === "demo" ? "live" : "demo")
+        }
+      />
 
       <StatusBlock
         state={data.state}
@@ -45,16 +53,6 @@ export default function WarRoom() {
       />
 
       <div className="demo-ctrl">
-        {"mode" in data && (
-          <button
-            className="btn"
-            onClick={() =>
-              data.setMode(data.mode === "demo" ? "live" : "demo")
-            }
-          >
-            {data.mode === "demo" ? "LIVE" : "DEMO"}
-          </button>
-        )}
         {!data.running && (
           <button className="btn primary" onClick={data.runDemo}>
             ▶ RUN DEMO
@@ -68,6 +66,9 @@ export default function WarRoom() {
       {data.loopState === "holding" && (
         <CountdownChip nextPlayInMs={data.nextPlayInMs} />
       )}
+
+      <SuspendedOverlay verdict={data.verdict} />
+      <ResumePulse acknowledged={"acknowledged" in (data.verdict ?? {}) && (data.verdict as { acknowledged?: boolean })?.acknowledged === true} />
 
       <div className="scanlines" />
       <div className="vignette" />
