@@ -821,6 +821,113 @@ html, body {
   bottom: 118px;
 }
 
+.demo-ctrl-hint {
+  flex-basis: 100%;
+  text-align: right;
+  font-size: 10px;
+  color: var(--muted, #8a8a8a);
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  max-width: 100%;
+  word-break: break-word;
+}
+
+/* ========== Live control centre (LIVE mode) ========== */
+.live-ctrl-centre {
+  position: fixed;
+  bottom: 14px;
+  left: 14px;
+  z-index: 103;
+  width: min(320px, calc(100vw - 28px));
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--line-1);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+}
+.shell.shell--board-rehearsal .live-ctrl-centre {
+  bottom: 118px;
+  max-height: calc(100vh - 200px);
+}
+.live-ctrl-centre--collapsed {
+  width: auto;
+  max-height: none;
+  overflow: visible;
+}
+.live-ctrl-centre--collapsed .live-ctrl-centre-head {
+  border-bottom: none;
+}
+.live-ctrl-centre-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-2);
+}
+.live-ctrl-centre-title {
+  color: var(--amber);
+  letter-spacing: 0.12em;
+  font-size: 10px;
+}
+.live-ctrl-centre-toggle {
+  background: transparent;
+  border: 1px solid var(--line-2);
+  color: var(--fg-dim);
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.live-ctrl-centre-toggle:hover {
+  border-color: var(--amber-dim);
+  color: var(--amber);
+}
+.live-ctrl-centre-section {
+  padding: 8px 10px 6px;
+  border-bottom: 1px solid var(--line);
+}
+.live-ctrl-centre-section--danger {
+  border-bottom: none;
+}
+.live-ctrl-centre-section--danger .live-ctrl-centre-label {
+  color: var(--red-dim);
+}
+.live-ctrl-centre-label {
+  display: block;
+  color: var(--fg-mute);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  margin-bottom: 6px;
+}
+.live-ctrl-centre-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.live-ctrl-centre-row--stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+.live-ctrl-centre-row--stack .btn {
+  width: 100%;
+  justify-content: center;
+}
+.live-ctrl-centre-hint {
+  margin: 0;
+  padding: 8px 10px 10px;
+  font-size: 9px;
+  color: var(--fg-dim);
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  border-top: 1px solid var(--line);
+  word-break: break-word;
+}
+
 /* Board rehearsal — slim strip; dashboard (grid) stays visible above */
 .rehearsal-dock {
   position: fixed;

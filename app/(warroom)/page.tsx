@@ -15,6 +15,7 @@ import { SuspendedOverlay } from "./components/SuspendedOverlay";
 import { ResumePulse } from "./components/ResumePulse";
 import { RehearsalModal } from "./components/RehearsalModal";
 import { RehearsalDock } from "./components/RehearsalDock";
+import { LiveControlCentre } from "./components/LiveControlCentre";
 import { runLiveRehearsals, type RehearsalRow } from "./rehearsal/runLiveRehearsals";
 
 export default function WarRoom() {
@@ -142,32 +143,19 @@ export default function WarRoom() {
             </button>
           </>
         )}
-        {data.mode === "live" && (
-          <>
-            <button
-              type="button"
-              className="btn primary"
-              disabled={boardRunning || traceRehearsalOpen}
-              title="Full trace log in a modal"
-              onClick={() => {
-                setBoardDockOpen(false);
-                setTraceRehearsalOpen(true);
-              }}
-            >
-              ◈ TRACE VIEW
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={boardRunning}
-              title="Same 3 rehearsals; watch timeline, agents, and SSE on the board"
-              onClick={() => void startBoardRehearsal()}
-            >
-              ◈ BOARD REHEARSAL
-            </button>
-          </>
-        )}
       </div>
+
+      {data.mode === "live" && (
+        <LiveControlCentre
+          boardRunning={boardRunning}
+          traceRehearsalOpen={traceRehearsalOpen}
+          onOpenTrace={() => {
+            setBoardDockOpen(false);
+            setTraceRehearsalOpen(true);
+          }}
+          onStartBoardRehearsal={() => void startBoardRehearsal()}
+        />
+      )}
 
       <RehearsalModal open={traceRehearsalOpen} onClose={() => setTraceRehearsalOpen(false)} />
 

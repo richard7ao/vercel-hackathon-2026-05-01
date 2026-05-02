@@ -70,6 +70,37 @@ export async function postEmbed(
   return res.json() as Promise<DiscordMessage>;
 }
 
+/**
+ * Manual war-room ping: @here + embed. Does not use the workflow path (useful when
+ * watchdog embeds fail due to env or permissions).
+ */
+export async function postWarRoomPing(channelId: string): Promise<DiscordMessage> {
+  const iso = new Date().toISOString();
+  const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({
+      content: `@here **BRIDGE** · manual ping · \`${iso}\``,
+      allowed_mentions: { parse: ["everyone"] },
+      embeds: [
+        {
+          title: "Deploy alert path",
+          description:
+            "Sent from the war room LIVE control. If automatic deploy flags stopped appearing, verify **DISCORD_BOT_TOKEN**, **DISCORD_CHANNEL_ID**, and bot permissions in this channel: **Send Messages**, **Embed Links**, **Attach Files**, and **Use External Apps** / interactions for buttons.",
+          color: 0xff8800,
+          footer: { text: "Bridge · POST /api/demo/discord-ping" },
+          timestamp: iso,
+        },
+      ],
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Discord postWarRoomPing failed: ${res.status} ${body}`);
+  }
+  return res.json() as Promise<DiscordMessage>;
+}
+
 export function buildPageEmbed(input: {
   deploy_id: string;
   verdict: {

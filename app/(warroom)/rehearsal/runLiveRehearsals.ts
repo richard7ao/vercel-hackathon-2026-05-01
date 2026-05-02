@@ -61,6 +61,123 @@ async function postDemoJson(
   });
 }
 
+export type GitRehearsalDemoResult =
+  | { ok: true; action: "inject"; sha: string; path?: string }
+  | { ok: true; action: "revert"; noop?: boolean; path?: string }
+  | { ok: false; status: number; message: string };
+
+/** One-shot git rehearsal API (same as automated runner uses). */
+export async function gitRehearsalDemo(
+  action: "inject" | "revert",
+  signal?: AbortSignal
+): Promise<GitRehearsalDemoResult> {
+  const eff = signal ?? new AbortController().signal;
+  const res = await postDemoJson(
+    "/api/demo/git-rehearsal",
+    { action },
+    eff
+  );
+  const text = await res.text().catch(() => "");
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: text.slice(0, 240) };
+  }
+  try {
+    const j = JSON.parse(text) as Record<string, unknown>;
+    if (action === "inject" && typeof j.sha === "string") {
+      return {
+        ok: true,
+        action: "inject",
+        sha: j.sha,
+        path: typeof j.path === "string" ? j.path : undefined,
+      };
+    }
+    if (action === "revert") {
+      return {
+        ok: true,
+        action: "revert",
+        noop: Boolean(j.noop),
+        path: typeof j.path === "string" ? j.path : undefined,
+      };
+    }
+  } catch {
+    /* fall through */
+  }
+  return { ok: false, status: res.status, message: "bad JSON from git-rehearsal" };
+}
+
+export type DiscordPingDemoResult =
+  | { ok: true; message_id: string }
+  | { ok: false; status: number; message: string };
+
+/** POST /api/demo/discord-ping — @here + embed in DISCORD_CHANNEL_ID. */
+export async function discordPingDemo(
+  signal?: AbortSignal
+): Promise<DiscordPingDemoResult> {
+  const eff = signal ?? new AbortController().signal;
+  const res = await postDemoJson("/api/demo/discord-ping", {}, eff);
+  const text = await res.text().catch(() => "");
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: text.slice(0, 240) };
+  }
+  try {
+    const j = JSON.parse(text) as { message_id?: string };
+    if (typeof j.message_id === "string") {
+      return { ok: true, message_id: j.message_id };
+    }
+  } catch {
+    /* fall through */
+  }
+  return { ok: false, status: res.status, message: "bad JSON from discord-ping" };
+}
+
+export type DemoTriggerResult =
+  | { ok: true; sha: string; score?: number }
+  | { ok: false; status: number; message: string };
+
+/** POST /api/demo/trigger — start watchdog with _force_score (no GitHub webhook). */
+export async function demoTriggerWatchdog(
+  opts?: { score?: number; sha?: string; signal?: AbortSignal }
+): Promise<DemoTriggerResult> {
+  const eff = opts?.signal ?? new AbortController().signal;
+  const body: Record<string, unknown> = {};
+  if (opts?.score !== undefined) body.score = opts.score;
+  if (opts?.sha !== undefined) body.sha = opts.sha;
+  const res = await postDemoJson("/api/demo/trigger", body, eff);
+  const text = await res.text().catch(() => "");
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: text.slice(0, 240) };
+  }
+  try {
+    const j = JSON.parse(text) as { sha?: string; score?: number };
+    if (typeof j.sha === "string") {
+      return { ok: true, sha: j.sha, score: j.score };
+    }
+  } catch {
+    /* fall through */
+  }
+  return { ok: false, status: res.status, message: "bad JSON from trigger" };
+}
+
+export type DemoResetResult =
+  | { ok: true; reset_at?: string }
+  | { ok: false; status: number; message: string };
+
+/** POST /api/demo/reset — runs scripts/reset-demo.sh (local / long-running env only). */
+export async function demoResetKv(signal?: AbortSignal): Promise<DemoResetResult> {
+  const eff = signal ?? new AbortController().signal;
+  const res = await postDemoJson("/api/demo/reset", {}, eff);
+  const text = await res.text().catch(() => "");
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: text.slice(0, 240) };
+  }
+  try {
+    const j = JSON.parse(text) as { reset_at?: string };
+    return { ok: true, reset_at: j.reset_at };
+  } catch {
+    return { ok: true };
+  }
+}
+
 async function pollKV(
   key: string,
   timeoutMs: number,
