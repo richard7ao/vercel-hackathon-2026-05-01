@@ -45,9 +45,10 @@ Demo mode fills these gaps with `lib/demo-tabs.ts` fixtures (a much richer narra
 
 If forced to cut, in this order (cut top first):
 
-1. T4 (Systems live mode + `/api/health` endpoint) — leave Systems all-green static even in "live" mode
-2. T3 (Intelligence — fold the audit log into the existing WarRoom feed; drop the section)
-3. T2 (Operations — replace card grid with a static table)
+1. T6 (Playwright browser coverage) — coverage hardening; existing tier3+tier4 grep tests still hold the line
+2. T4 (Systems live mode + `/api/health` endpoint) — leave Systems all-green static even in "live" mode
+3. T3 (Intelligence — fold the audit log into the existing WarRoom feed; drop the section)
+4. T2 (Operations — replace card grid with a static table)
 
 If we cut into T0 or T1, the multi-page submission is no longer differentiated — escalate before continuing.
 
@@ -171,7 +172,7 @@ exit $ec
 
 #### T0.3.1 — `app/(warroom)/components/Sidebar.tsx`
 
-**Description:** Fixed-left, 280px wide expanded / 64px collapsed. Five nav buttons (WAR ROOM / AGENT NETWORK / OPERATIONS / INTELLIGENCE / SYSTEMS), each with a lucide icon and uppercase mono label. Active button: `var(--amber)` left-border + label color (no fill, no rounding). Bottom block when expanded: pulsing green dot + `SYSTEM ONLINE`, then three lines pulled from `useDashboard().data`: `UPTIME: <data.uptime formatted>`, `AGENTS: <Object.keys(data.agents).length> active`, `DEPLOYS: <data.deploysAnalyzed> analyzed`. Collapse toggle in header.
+**Description:** Fixed-left, 280px wide expanded / 64px collapsed. Five nav buttons (WAR ROOM / AGENT NETWORK / OPERATIONS / INTELLIGENCE / SYSTEMS), each with a lucide icon and uppercase mono label. Active button: `var(--amber)` left-border + label color (no fill, no rounding); active button also gets `data-active="true"` attribute (asserted by T6.1.2 and T6.1.4 Playwright tests). Each button also has `data-tab="warroom|agents|ops|intel|systems"` for selectors. Bottom block when expanded: pulsing green dot + `SYSTEM ONLINE`, then three lines pulled from `useDashboard().data`: `UPTIME: <data.uptime formatted>`, `AGENTS: <Object.keys(data.agents).length> active`, `DEPLOYS: <data.deploysAnalyzed> analyzed`. Collapse toggle in header.
 
 **Verify:**
 
@@ -203,7 +204,7 @@ echo 'covered_by=T0.3.2'
 
 #### T0.3.2 — Replace `app/(warroom)/page.tsx` with shell
 
-**Description:** New `page.tsx` body: `<DashboardProvider>` wraps a flex row containing `<Sidebar />` + a right column. Right column renders `<WarRoom />` / `<AgentNetwork />` / `<Operations />` / `<Intelligence />` / `<Systems />` based on `currentTab`. WarRoom is the default tab on first paint. Scanlines + vignette divs stay at the page level (above all sections). On mount, the provider reads `new URLSearchParams(window.location.search).get('tab')` and initializes `currentTab` to one of `'warroom' | 'agents' | 'ops' | 'intel' | 'systems'` (default `'warroom'`). This makes `?tab=agents` direct-link the Agent Network section, used by tier-4 integration tests.
+**Description:** New `page.tsx` body: `<DashboardProvider>` wraps a flex row containing `<Sidebar />` + a right column. Right column renders `<WarRoom />` / `<AgentNetwork />` / `<Operations />` / `<Intelligence />` / `<Systems />` based on `currentTab`. WarRoom is the default tab on first paint. Scanlines + vignette divs stay at the page level (above all sections). On mount, the provider reads `new URLSearchParams(window.location.search).get('tab')` and initializes `currentTab` to one of `'warroom' | 'agents' | 'ops' | 'intel' | 'systems'` (default `'warroom'`). When `setCurrentTab` is called, the provider also calls `window.history.replaceState(null, '', '?tab=<id>')` so the URL stays in sync. This makes `?tab=agents` both direct-link and reflect-back, used by tier-4 SSR tests and T6 Playwright tests.
 
 **Requires:** T0.2.2, T0.3.1
 
@@ -330,7 +331,7 @@ echo 'covered_by=T1.1.1+T2.1.1+T3.1.1+T4.1.2'
 
 #### T1.1.1 — `app/(warroom)/sections/AgentNetwork.tsx` (demo mode first)
 
-**Description:** Layout: section header (title + subtitle), 4 stat tiles (TOTAL INVESTIGATORS / DISPATCHED / IDLE / FAILED-LAST-24H), roster table (id / role / status / runs / avg MTTA / last verdict / actions). Click a row → opens a right-side drawer with run history list. Demo mode uses `DEMO_INVESTIGATORS`; live-mode branch is a `// TODO: T1.1.2` for now.
+**Description:** Layout: section header (title + subtitle), 4 stat tiles (TOTAL INVESTIGATORS / DISPATCHED / IDLE / FAILED-LAST-24H), roster table (id / role / status / runs / avg MTTA / last verdict / actions). Click a row → opens a right-side drawer with run history list. Drawer mounts with `data-drawer-open="true"` attribute on its root element (asserted by T6.1.6). Click on the dim overlay behind the drawer dismisses it (removes the element from the DOM). Demo mode uses `DEMO_INVESTIGATORS`; live-mode branch is a `// TODO: T1.1.2` for now.
 
 **Requires:** T0.3.2, T0.4.1
 
@@ -460,7 +461,7 @@ echo 'covered_by=T1.1.1'
 
 #### T2.1.1 — `app/(warroom)/sections/Operations.tsx` (demo + live both)
 
-**Description:** Top filter row (status pills: ALL / ACTIVE / CLEAR / SUSPENDED / FAILED). Card grid (3 cols at 1400+, 2 cols 1024+, 1 col below). Each card: sha+author header, verdict pill (green/amber/red), score, files-changed count, mini deploy timeline svg. Demo mode = `DEMO_OPERATIONS`. Live mode = `data.deploys` with verdicts derived as: `verdict = data.verdict?.deploy_id === d.id ? data.verdict.level : 'pending'` (only the *current* verdict matches one deploy; others render as "pending"). Click on card → calls `setActiveDeploy(d.id)` from context and `setCurrentTab('warroom')`. **Note:** in this session the live-mode card grid will typically show 1-3 deploys (only what's been pushed since SSE connected); demo mode shows the full 8-deploy narrative.
+**Description:** Top filter row (status pills: ALL / ACTIVE / CLEAR / SUSPENDED / FAILED). Card grid (3 cols at 1400+, 2 cols 1024+, 1 col below). Each card: sha+author header, verdict pill (green/amber/red), score, files-changed count, mini deploy timeline svg. Each card root has `data-deploy-id="<id>"` and renders the deploy's id text (so T6.1.4 Playwright can find it post-click). Demo mode = `DEMO_OPERATIONS`. Live mode = `data.deploys` with verdicts derived as: `verdict = data.verdict?.deploy_id === d.id ? data.verdict.level : 'pending'` (only the *current* verdict matches one deploy; others render as "pending"). Click on card → calls `setActiveDeploy(d.id)` from context and `setCurrentTab('warroom')`. The WarRoom shell adds `data-active-deploy="<id>"` to its outermost `.shell` div whenever `data.activeDeploy` is non-null (one-line addition in T0.1.1's WarRoom render). **Note:** in this session the live-mode card grid will typically show 1-3 deploys (only what's been pushed since SSE connected); demo mode shows the full 8-deploy narrative.
 
 **Requires:** T0.3.2, T0.4.1
 
@@ -961,10 +962,258 @@ exit $ec
 
 ---
 
+## T6 — End-to-end browser coverage
+
+**Description:** Plug the four gaps the tier4 SSR-grep tests can't reach: click-driven nav, SSE persistence across tab switches, Operations card → WarRoom drill-down, Systems polling interval. Real Playwright tests, runnable in CI, deterministic.
+
+### T6.1 — Playwright setup + e2e specs
+
+#### T6.1.1 — Install Playwright + init
+
+**Description:** Add `@playwright/test` as a devDependency (`npm install --save-dev @playwright/test`). Run `npx playwright install chromium` to fetch the browser binary. Create `playwright.config.ts` with: `testDir: './tests/e2e'`, `webServer: { command: 'npx next dev -p 3030', url: 'http://localhost:3030', reuseExistingServer: !process.env.CI, timeout: 60_000 }`, `use: { baseURL: 'http://localhost:3030', trace: 'on-first-retry' }`, single project (chromium). Add a top-level `package.json` script `"test:e2e": "playwright test"`.
+
+**Verify:**
+
+```bash
+# tier1_build
+npx tsc --noEmit && test -f playwright.config.ts && grep -q '"@playwright/test"' package.json
+```
+
+```bash
+# tier2_simplify
+# Files in scope: package.json, playwright.config.ts (new)
+```
+
+```bash
+# tier3_unit
+# Behavior: playwright config parses and exports a test config object.
+node -e "
+const cfg = require('./playwright.config.ts');
+const c = cfg.default ?? cfg;
+if (!c.webServer || !c.webServer.command) throw new Error('webServer missing');
+if (c.webServer.url !== 'http://localhost:3030') throw new Error('webServer.url wrong');
+console.log('OK');
+" 2>&1 || npx tsx --input-type=module -e "
+import('./playwright.config.ts').then(m => {
+  const c = m.default;
+  if (!c.webServer) throw new Error('webServer missing');
+  console.log('OK');
+});
+"
+```
+
+```bash
+# tier4_integration
+# Playwright is installed; running a no-op test list confirms the runner boots.
+npx playwright test --list > /tmp/pw-list.log 2>&1 ; ec=$? ; \
+test $ec -eq 0 || (cat /tmp/pw-list.log; exit 1)
+```
+
+#### T6.1.2 — `tests/e2e/sidebar-nav.spec.ts`
+
+**Description:** Browser test: load `/`, assert sidebar has 5 buttons. Click each (WAR ROOM / AGENT NETWORK / OPERATIONS / INTELLIGENCE / SYSTEMS), assert the right section's marker text appears (`BRIDGE`, `INVESTIGATOR`, `OPERATIONS`, `INTELLIGENCE`, `KV`). Per click, also assert URL query param updates to `?tab=warroom|agents|ops|intel|systems` respectively (T0.3.2 writes this via `history.replaceState`).
+
+**Requires:** T6.1.1, T0.3.2
+
+**Verify:**
+
+```bash
+# tier1_build
+npx tsc --noEmit
+```
+
+```bash
+# tier2_simplify
+# Files in scope: tests/e2e/sidebar-nav.spec.ts (new)
+```
+
+```bash
+# tier3_unit
+# Static check: the spec file references all 5 sections.
+node -e "
+const src = require('fs').readFileSync('tests/e2e/sidebar-nav.spec.ts', 'utf8');
+for (const t of ['WAR ROOM','AGENT NETWORK','OPERATIONS','INTELLIGENCE','SYSTEMS']) {
+  if (!src.includes(t)) throw new Error('spec missing label: ' + t);
+}
+console.log('OK');
+"
+```
+
+```bash
+# tier4_integration
+npx playwright test tests/e2e/sidebar-nav.spec.ts --reporter=list
+```
+
+#### T6.1.3 — `tests/e2e/sse-persistence.spec.ts`
+
+**Description:** Browser test: load `/?live=0` (demo mode), wait for `data.deploysAnalyzed > 0` (visible in sidebar status block as `DEPLOYS: <n> analyzed`). Capture the count `before`. Click AGENT NETWORK → wait 200ms → click OPERATIONS → wait 200ms → click WAR ROOM. Capture count `after`. Assert `after >= before` (counter must not reset, and demo timer keeps ticking across tabs). Hard fail if `after < before`.
+
+**Requires:** T6.1.1, T5.1.2
+
+**Verify:**
+
+```bash
+# tier1_build
+npx tsc --noEmit
+```
+
+```bash
+# tier2_simplify
+# Files in scope: tests/e2e/sse-persistence.spec.ts (new)
+```
+
+```bash
+# tier3_unit
+node -e "
+const src = require('fs').readFileSync('tests/e2e/sse-persistence.spec.ts', 'utf8');
+if (!src.match(/deploysAnalyzed|DEPLOYS:/)) throw new Error('spec must read deploys counter');
+if (!src.match(/expect.*after.*before|after\s*>=\s*before/)) throw new Error('spec must assert counter monotonicity');
+console.log('OK');
+"
+```
+
+```bash
+# tier4_integration
+npx playwright test tests/e2e/sse-persistence.spec.ts --reporter=list
+```
+
+#### T6.1.4 — `tests/e2e/operations-drilldown.spec.ts`
+
+**Description:** Browser test: load `/?tab=ops` (demo mode). Assert at least 5 deploy cards rendered (each has `data-deploy-id`). Capture the second card's `data-deploy-id` attribute. Click it. Assert WAR ROOM is now active (URL shows `?tab=warroom`, sidebar's WAR ROOM button has `[data-active="true"]`). Assert the WarRoom shell's outer `.shell` element now has `data-active-deploy` matching the captured id.
+
+**Requires:** T6.1.1, T2.1.1
+
+**Verify:**
+
+```bash
+# tier1_build
+npx tsc --noEmit
+```
+
+```bash
+# tier2_simplify
+# Files in scope: tests/e2e/operations-drilldown.spec.ts (new)
+```
+
+```bash
+# tier3_unit
+node -e "
+const src = require('fs').readFileSync('tests/e2e/operations-drilldown.spec.ts', 'utf8');
+if (!src.match(/\\?tab=ops/)) throw new Error('spec must direct-link to ops tab');
+if (!src.match(/data-active|WAR ROOM/)) throw new Error('spec must assert WAR ROOM activates');
+console.log('OK');
+"
+```
+
+```bash
+# tier4_integration
+npx playwright test tests/e2e/operations-drilldown.spec.ts --reporter=list
+```
+
+#### T6.1.5 — `tests/e2e/systems-polling.spec.ts`
+
+**Description:** Browser test: load `/?tab=systems&live=1`. Use `page.route('**/api/health', ...)` to intercept and count calls. Wait 12 seconds. Assert at least 2 calls were made (initial + one 10s interval tick). Assert the 4 service tiles (KV / AI GATEWAY / DISCORD / GITHUB) all rendered with status indicators.
+
+**Requires:** T6.1.1, T4.1.2
+
+**Verify:**
+
+```bash
+# tier1_build
+npx tsc --noEmit
+```
+
+```bash
+# tier2_simplify
+# Files in scope: tests/e2e/systems-polling.spec.ts (new)
+```
+
+```bash
+# tier3_unit
+node -e "
+const src = require('fs').readFileSync('tests/e2e/systems-polling.spec.ts', 'utf8');
+if (!src.match(/page\.route.*\/api\/health/)) throw new Error('spec must intercept /api/health');
+if (!src.match(/>=?\s*2|toBeGreaterThanOrEqual\(2\)/)) throw new Error('spec must assert >= 2 calls');
+console.log('OK');
+"
+```
+
+```bash
+# tier4_integration
+npx playwright test tests/e2e/systems-polling.spec.ts --reporter=list
+```
+
+#### T6.1.6 — `tests/e2e/agent-drawer.spec.ts`
+
+**Description:** Browser test: load `/?tab=agents`. Click the first roster row. Assert drawer slides in from the right (`[data-drawer-open="true"]` exists). Click the overlay (anywhere outside the drawer). Assert drawer dismisses (`[data-drawer-open="true"]` no longer in DOM).
+
+**Requires:** T6.1.1, T1.1.1
+
+**Verify:**
+
+```bash
+# tier1_build
+npx tsc --noEmit
+```
+
+```bash
+# tier2_simplify
+# Files in scope: tests/e2e/agent-drawer.spec.ts (new)
+```
+
+```bash
+# tier3_unit
+node -e "
+const src = require('fs').readFileSync('tests/e2e/agent-drawer.spec.ts', 'utf8');
+if (!src.match(/data-drawer-open/)) throw new Error('spec must assert drawer-open data attribute');
+if (!src.match(/click.*overlay|click.*outside/i)) throw new Error('spec must dismiss via overlay click');
+console.log('OK');
+"
+```
+
+```bash
+# tier4_integration
+npx playwright test tests/e2e/agent-drawer.spec.ts --reporter=list
+```
+
+#### T6.1.7 — Aggregate e2e suite
+
+**Description:** Add a single `npm run test:e2e` invocation that runs all five specs serially (CI gate). No new spec file — just confirm `npx playwright test` exits 0 with all 5 specs in the suite.
+
+**Requires:** T6.1.2, T6.1.3, T6.1.4, T6.1.5, T6.1.6
+
+**Verify:**
+
+```bash
+# tier1_build
+npx tsc --noEmit
+```
+
+```bash
+# tier2_simplify
+# No source changes — verification only.
+```
+
+```bash
+# tier3_unit
+# Confirm playwright sees all 5 specs.
+npx playwright test --list 2>&1 | tee /tmp/pw-list.log | grep -c 'spec.ts' > /tmp/pw-count
+test "$(cat /tmp/pw-count)" -ge 5 || (cat /tmp/pw-list.log; exit 1)
+```
+
+```bash
+# tier4_integration
+# Full run — all 5 specs must pass.
+npx playwright test --reporter=list
+```
+
+---
+
 ## Summary
 
 - **5 sections** rendered from one shell, one SSE connection, one demo/live toggle.
 - **Hand-rolled** in existing CSS war-room palette — no shadcn, no rounded, no gradients.
 - **Both modes** specced for every tab. Live mode reuses the existing SSE payload (no new backend writes); only `/api/health` is new.
-- **Layered cuts:** if context exhausts, drop Systems live → Intelligence → Operations in that order. T0 + T1 are non-negotiable.
+- **Coverage:** tier3 unit tests for behavior + grep guards; tier4 SSR HTML markers; **T6** Playwright e2e for click-driven flows, SSE persistence, drill-down, polling, drawer dismiss.
+- **Layered cuts:** if context exhausts, drop T6 → Systems live → Intelligence → Operations in that order. T0 + T1 are non-negotiable.
 - **Aesthetic gate** at T5.1.3 enforces the locked palette across every new file via grep.
