@@ -1,4 +1,4 @@
-import { kv } from "@/lib/db";
+import { redisGet, redisScan } from "@/lib/db-redis";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +20,7 @@ export async function GET() {
           ] as const;
 
           const lists = await Promise.all(
-            prefixes.map((p) => kv.list(p.prefix))
+            prefixes.map((p) => redisScan(p.prefix + "*"))
           );
 
           const newKeys: { key: string; event: string }[] = [];
@@ -39,7 +39,7 @@ export async function GET() {
 
           if (newKeys.length > 0) {
             const records = await Promise.all(
-              newKeys.map((nk) => kv.get(nk.key))
+              newKeys.map((nk) => redisGet(nk.key).then(r => r ? JSON.parse(r) : null).catch(() => null))
             );
             for (let i = 0; i < newKeys.length; i++) {
               if (records[i]) {

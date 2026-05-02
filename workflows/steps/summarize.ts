@@ -1,7 +1,7 @@
 "use step";
 
 import { generateText } from "ai";
-import { setDeploy, getDeploy } from "../../lib/db";
+import { redisGet, redisSet } from "../../lib/db-redis";
 import { getGateway } from "../../lib/ai-gateway";
 
 type SummarizeInput = {
@@ -39,9 +39,10 @@ export async function summarize(
 
   if (input.sha) {
     try {
-      const existing = await getDeploy(input.sha);
-      if (existing) {
-        await setDeploy(input.sha, { ...existing, tldr });
+      const raw = await redisGet(`deploys:${input.sha}`);
+      if (raw) {
+        const existing = JSON.parse(raw);
+        await redisSet(`deploys:${input.sha}`, JSON.stringify({ ...existing, tldr }));
       }
     } catch (err) {
       console.warn("[summarize] KV update failed:", err);

@@ -1,18 +1,24 @@
 "use step";
 
-import { kv } from "../../lib/db";
+import { redisGet, redisSet, redisDel } from "../../lib/db-redis";
 import { postEmbed as discordPostEmbed } from "../../lib/discord";
 
 export async function kvSet(key: string, value: unknown): Promise<void> {
-  await kv.set(key, value);
+  await redisSet(key, typeof value === "string" ? value : JSON.stringify(value));
 }
 
 export async function kvGet<T = unknown>(key: string): Promise<T | null> {
-  return kv.get<T>(key);
+  const raw = await redisGet(key);
+  if (raw === null) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return raw as T;
+  }
 }
 
 export async function kvDel(key: string): Promise<void> {
-  await kv.del(key);
+  await redisDel(key);
 }
 
 export async function postDiscordEmbed(

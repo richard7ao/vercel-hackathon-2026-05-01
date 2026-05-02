@@ -1,7 +1,7 @@
 "use step";
 
 import { score, compoundBonus } from "../../lib/score";
-import { setDeploy } from "../../lib/db";
+import { redisSet } from "../../lib/db-redis";
 
 type ScoreInput = {
   ingest: {
@@ -76,7 +76,7 @@ export async function scoreStep(input: ScoreInput) {
 
   if (input.ingest.sha) {
     try {
-      await setDeploy(input.ingest.sha, {
+      await redisSet(`deploys:${input.ingest.sha}`, JSON.stringify({
         sha: input.ingest.sha,
         score: finalScore,
         verdict_bucket,
@@ -85,7 +85,7 @@ export async function scoreStep(input: ScoreInput) {
         files_changed: (input.ingest.files as { path: string }[]).map(
           (f) => f.path
         ),
-      });
+      }));
     } catch (err) {
       console.warn("[score] KV update failed:", err);
     }

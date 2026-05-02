@@ -2,7 +2,7 @@
 
 import { DurableAgent, Output } from "@workflow/ai/agent";
 import { z } from "zod";
-import { kv } from "../lib/db";
+import { redisSet } from "../lib/db-redis";
 import { getGateway } from "../lib/ai-gateway";
 import { LEVELS } from "../lib/verdict-levels";
 import { derivedVerdict, type Verdict } from "./synthesizer-helpers";
@@ -58,10 +58,10 @@ Score: ${score}`;
     verdict = derivedVerdict({ findings, signals, score });
   }
 
-  await kv.set(`verdicts:${deploy_id}`, {
-    ...verdict,
-    synthesized_at: new Date().toISOString(),
-  });
+  await redisSet(
+    `verdicts:${deploy_id}`,
+    JSON.stringify({ ...verdict, synthesized_at: new Date().toISOString() })
+  );
 
   return verdict;
 }

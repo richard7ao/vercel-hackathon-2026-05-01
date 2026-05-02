@@ -1,6 +1,6 @@
 "use step";
 
-import { kv } from "../../lib/db";
+import { redisGet } from "../../lib/db-redis";
 import {
   type InvestigatorInput,
   type InvestigatorResult,
@@ -25,11 +25,11 @@ export async function historyDeterministic(
   let knownDirs: string[] = [];
   if (input.author) {
     try {
-      const raw = await kv.get<string[] | string>(
-        `history:author:${input.author}`
-      );
-      if (Array.isArray(raw)) knownDirs = raw;
-      else if (typeof raw === "string") knownDirs = JSON.parse(raw);
+      const rawStr = await redisGet(`history:author:${input.author}`);
+      if (rawStr) {
+        const parsed = JSON.parse(rawStr);
+        if (Array.isArray(parsed)) knownDirs = parsed;
+      }
     } catch (err) {
       console.warn("[history] author lookup failed:", err);
     }
@@ -55,18 +55,12 @@ export async function historyDeterministic(
   const hour = new Date().getUTCHours();
   const hourResults = await Promise.all(
     input.files.map((file) =>
-      kv
-        .get<number[] | string>(`history:hour:${file.path}`)
-        .catch(() => null)
+      redisGet(`history:hour:${file.path}`).catch(() => null)
     )
   );
-  for (const raw of hourResults) {
-    const counts = Array.isArray(raw)
-      ? raw
-      : typeof raw === "string"
-        ? JSON.parse(raw)
-        : null;
-    if (!counts || counts[hour] === 0) novelHours++;
+  for (const rawStr of hourResults) {
+    const counts = rawStr ? JSON.parse(rawStr) : null;
+    if (!Array.isArray(counts) || counts[hour] === 0) novelHours++;
   }
 
   let severity: "low" | "medium" | "high" | "critical" = "low";

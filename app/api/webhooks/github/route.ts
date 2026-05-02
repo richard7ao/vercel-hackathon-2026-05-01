@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
-import { kv } from "@/lib/db";
+import { redisSet } from "@/lib/db-redis";
 import { start } from "workflow/api";
 import { watchdog } from "@/workflows/watchdog";
 
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
   const before = payload.before ?? "";
 
   try {
-    await kv.set(`deploys:raw:${sha}`, JSON.parse(body));
+    await redisSet(`deploys:raw:${sha}`, body);
   } catch (err) {
     console.error("[webhook] KV write failed:", err);
   }
