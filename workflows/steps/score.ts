@@ -11,18 +11,18 @@ type ScoreInput = {
     pushed_at: string;
   };
   signals: {
-    structural?: Record<string, { severity: number }[]>;
+    structural?: Record<string, unknown>;
     behavioral?: Record<string, unknown>;
     temporal?: Record<string, unknown>;
   };
 };
 
-function maxSeverity(group: Record<string, { severity: number }[]>): number {
+function maxSeverity(group: Record<string, unknown>): number {
   let max = 0;
   for (const hits of Object.values(group)) {
     if (!Array.isArray(hits)) continue;
     for (const h of hits) {
-      if (typeof h.severity === "number" && h.severity > max) max = h.severity;
+      if (h && typeof h === "object" && "severity" in h && typeof (h as Record<string, unknown>).severity === "number" && ((h as Record<string, unknown>).severity as number) > max) max = (h as Record<string, unknown>).severity as number;
     }
   }
   return max;

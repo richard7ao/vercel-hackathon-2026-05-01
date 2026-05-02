@@ -1,6 +1,9 @@
 "use workflow";
 
 import { ingest } from "./steps/ingest";
+import { extractSignals } from "./steps/extract-signals";
+import { scoreStep } from "./steps/score";
+import { summarize } from "./steps/summarize";
 
 type WatchdogInput = {
   sha: string;
@@ -14,6 +17,7 @@ type WatchdogInput = {
 type WatchdogResult = {
   sha: string;
   score: number;
+  verdict_bucket?: string;
   signals?: Record<string, unknown>;
   tldr?: string;
 };
@@ -38,11 +42,18 @@ export async function watchdog(input: WatchdogInput): Promise<WatchdogResult> {
     return { sha, score: 0 };
   }
 
-  // Steps will be wired in T2.2–T2.6
-  return {
+  const signals = await extractSignals(ingestResult);
+
+  const { score, verdict_bucket } = await scoreStep({
+    ingest: { ...ingestResult, sha },
+    signals,
+  });
+
+  const { tldr } = await summarize({
+    files: ingestResult.files,
+    commit_message: ingestResult.commit_message,
     sha,
-    score: 0,
-    signals: { files: ingestResult.files.length },
-    tldr: ingestResult.commit_message,
-  };
+  });
+
+  return { sha, score, verdict_bucket, signals, tldr };
 }
