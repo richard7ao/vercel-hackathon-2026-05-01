@@ -38,11 +38,6 @@ function cloneRows(rows: RehearsalRow[]): RehearsalRow[] {
 }
 
 export async function getDemoToken(): Promise<string> {
-  // Use NEXT_PUBLIC_DEMO_TOKEN (build-time injection) if available
-  if (process.env.NEXT_PUBLIC_DEMO_TOKEN) {
-    return process.env.NEXT_PUBLIC_DEMO_TOKEN;
-  }
-  // Fallback to window-injected token or static default
   if (typeof window !== "undefined") {
     const w = window as unknown as Record<string, string>;
     return w.__DEMO_TOKEN ?? "bridge-demo-2026";
