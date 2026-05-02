@@ -4,7 +4,7 @@ import {
   applyAck,
   computeTimeoutAt,
   buildSignalName,
-} from "./watchdog";
+} from "./watchdog-helpers";
 
 describe("buildSignalName()", () => {
   it("produces deploy:ack:<id>", () => {

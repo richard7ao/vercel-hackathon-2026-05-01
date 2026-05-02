@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { derivedVerdict } from "./synthesizer";
+import { derivedVerdict } from "./synthesizer-helpers";
 
 describe("derivedVerdict()", () => {
   it.each([

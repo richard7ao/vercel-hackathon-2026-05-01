@@ -14,7 +14,7 @@ fail() { echo "  FAIL  $1"; ((FAIL++)); }
 warn() { echo "  WARN  $1"; ((WARN++)); }
 
 echo "============================================"
-echo "  Bridge Integration Test Suite"
+echo "  Bridge Smoke Harness"
 echo "============================================"
 echo ""
 
@@ -428,10 +428,12 @@ else
   fail "Interpolation: $INTERP_TEST"
 fi
 
-# Synthesizer (derivedVerdict)
+# Synthesizer (derivedVerdict) + verdict-levels (escalateLevel)
 SYNTH_TEST=$(npx tsx --input-type=module -e "
-const m = await import('./workflows/synthesizer.ts');
-const { derivedVerdict, escalateLevel, parseLLMVerdict } = m.default || m;
+const sm = await import('./workflows/synthesizer-helpers.ts');
+const { derivedVerdict } = sm.default || sm;
+const vm = await import('./lib/verdict-levels.ts');
+const { escalateLevel } = vm.default || vm;
 
 // High score + critical finding -> critical
 const v1 = derivedVerdict({
@@ -452,15 +454,11 @@ if (v2.level !== 'benign') { console.log('FAIL:level=' + v2.level); process.exit
 if (escalateLevel('benign', 'critical') !== 'critical') { console.log('FAIL:escalate'); process.exit(1); }
 if (escalateLevel('critical', 'low') !== 'critical') { console.log('FAIL:no-downgrade'); process.exit(1); }
 
-// parseLLMVerdict
-const parsed = parseLLMVerdict('{\"level\":\"critical\",\"summary\":\"bad\",\"concerns\":[\"c1\"],\"suggested_action\":\"stop\"}');
-if (!parsed || parsed.level !== 'critical') { console.log('FAIL:parse'); process.exit(1); }
-
 console.log('OK');
 " 2>&1)
 
 if echo "$SYNTH_TEST" | grep -q "^OK"; then
-  pass "Synthesizer: derivedVerdict + escalateLevel + parseLLMVerdict"
+  pass "Synthesizer: derivedVerdict + escalateLevel"
 else
   fail "Synthesizer: $SYNTH_TEST"
 fi
@@ -618,24 +616,21 @@ else
   fail "Score edge cases: $SCORE_EDGE"
 fi
 
-# parseLLMVerdict — malformed JSON and injection attempts must not crash
+# derivedVerdict — adversarial inputs must not crash
 VERDICT_EDGE=$(npx tsx --input-type=module -e "
-const m = await import('./workflows/synthesizer.ts');
-const { parseLLMVerdict } = m.default || m;
+const m = await import('./workflows/synthesizer-helpers.ts');
+const { derivedVerdict } = m.default || m;
 const bad = [
-  'not json at all',
-  '{\"level\":\"INVALID\",\"summary\":\"\",\"concerns\":[],\"suggested_action\":\"\"}',
-  '',
-  null,
-  '{\"level\":\"benign\"}',
-  '<script>alert(1)</script>',
-  '{}'.repeat(1000),
+  { findings: [], signals: {}, score: NaN },
+  { findings: null, signals: null, score: -1 },
+  { findings: [{ agent: 'x', severity: 'INVALID', summary: '' }], signals: {}, score: 2 },
+  { findings: undefined, signals: undefined, score: undefined },
 ];
 let safe = 0;
 for (const input of bad) {
   try {
-    const result = parseLLMVerdict(input);
-    safe++;
+    const result = derivedVerdict(input);
+    if (result && result.level) safe++;
   } catch {
     safe++;
   }
@@ -643,10 +638,10 @@ for (const input of bad) {
 console.log('SAFE:' + safe + '/' + bad.length);
 " 2>&1)
 
-if echo "$VERDICT_EDGE" | grep -q "SAFE:7/7"; then
-  pass "parseLLMVerdict handles all 7 malformed inputs without crash"
+if echo "$VERDICT_EDGE" | grep -q "SAFE:4/4"; then
+  pass "derivedVerdict handles all 4 adversarial inputs without crash"
 else
-  fail "parseLLMVerdict edge cases: $VERDICT_EDGE"
+  fail "derivedVerdict edge cases: $VERDICT_EDGE"
 fi
 
 # Demo branch allowlist — arbitrary branch names must be rejected

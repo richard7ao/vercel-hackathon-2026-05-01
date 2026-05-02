@@ -12,7 +12,7 @@ set -euo pipefail
 # Vercel deployment via /api/discord/interactions button clicks.
 
 PORT=${PORT:-3030}
-SHA="chaos-$(date +%s)"
+SHA="chaos$(date +%s | md5 -q | head -c 32)"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export DOTENV_CONFIG_PATH="$ROOT/.env.local"
 
@@ -59,22 +59,23 @@ if echo "$STREAM" | grep -q 'connected'; then
 fi
 
 # ── 4. Write KV state (simulate pause_state + verdict) ──────────
+# Uses db-redis.ts directly — tests Redis persistence, not the API layer
 phase "write-kv-state"
 tsx_run "
-import('./lib/db.ts').then(async (m) => {
-  const kv = (m.default || m).kv || m.kv;
-  await kv.set('pause_state:$SHA', {
+import('./lib/db-redis.ts').then(async (m) => {
+  const { redisSet } = m.default || m;
+  await redisSet('pause_state:$SHA', JSON.stringify({
     paused_at: new Date().toISOString(),
     hook_token: 'deploy:ack:$SHA',
     timeout_at: new Date(Date.now() + 86400000).toISOString(),
-  });
-  await kv.set('verdicts:$SHA', {
+  }));
+  await redisSet('verdicts:$SHA', JSON.stringify({
     level: 'critical',
     summary: 'chaos drill test',
     concerns: ['c1', 'c2', 'c3'],
     suggested_action: 'review',
     synthesized_at: new Date().toISOString(),
-  });
+  }));
   console.log('KV state written: pause_state:$SHA + verdicts:$SHA');
   process.exit(0);
 }).catch(e => { console.error(e); process.exit(1); });
@@ -98,14 +99,16 @@ echo "server restarted"
 # ── 7. Verify KV state survived the kill ─────────────────────────
 phase "verify-kv-survived"
 tsx_run "
-import('./lib/db.ts').then(async (m) => {
-  const kv = (m.default || m).kv || m.kv;
-  const ps = await kv.get('pause_state:$SHA');
+import('./lib/db-redis.ts').then(async (m) => {
+  const { redisGet } = m.default || m;
+  const psRaw = await redisGet('pause_state:$SHA');
+  const ps = psRaw ? JSON.parse(psRaw) : null;
   if (!ps || ps.hook_token !== 'deploy:ack:$SHA') {
     console.log('FAIL: pause_state lost');
     process.exit(1);
   }
-  const v = await kv.get('verdicts:$SHA');
+  const vRaw = await redisGet('verdicts:$SHA');
+  const v = vRaw ? JSON.parse(vRaw) : null;
   if (!v || v.level !== 'critical') {
     console.log('FAIL: verdict lost');
     process.exit(1);
@@ -118,10 +121,10 @@ import('./lib/db.ts').then(async (m) => {
 # ── 8. Simulate ack via applyAck (same logic resumeHook triggers) ─
 phase "simulate-ack"
 tsx_run "
-Promise.all([import('./workflows/watchdog.ts'), import('./lib/db.ts')]).then(async ([wm, dm]) => {
+Promise.all([import('./workflows/watchdog-helpers.ts'), import('./lib/db-redis.ts')]).then(async ([wm, m]) => {
   const w = wm.default || wm;
   const { applyAck, validateAckPayload } = w;
-  const kv = (dm.default || dm).kv || dm.kv;
+  const { redisGet, redisSet, redisDel } = m.default || m;
 
   const payload = { action_type: 'ack', user: { id: 'chaos-test', username: 'chaos' } };
   if (!validateAckPayload(payload)) {
@@ -129,7 +132,8 @@ Promise.all([import('./workflows/watchdog.ts'), import('./lib/db.ts')]).then(asy
     process.exit(1);
   }
 
-  const existing = await kv.get('verdicts:$SHA') || {};
+  const existingRaw = await redisGet('verdicts:$SHA');
+  const existing = existingRaw ? JSON.parse(existingRaw) : {};
   const updated = applyAck(existing, payload);
   if (!updated.acknowledged_at) {
     console.log('FAIL: acknowledged_at not set');
@@ -140,8 +144,8 @@ Promise.all([import('./workflows/watchdog.ts'), import('./lib/db.ts')]).then(asy
     process.exit(1);
   }
 
-  await kv.set('verdicts:$SHA', updated);
-  await kv.del('pause_state:$SHA');
+  await redisSet('verdicts:$SHA', JSON.stringify(updated));
+  await redisDel('pause_state:$SHA');
   console.log('ack applied: acknowledged_at set, pause_state cleaned');
   process.exit(0);
 }).catch(e => { console.error(e); process.exit(1); });
@@ -150,12 +154,13 @@ Promise.all([import('./workflows/watchdog.ts'), import('./lib/db.ts')]).then(asy
 # ── 9. Verify final state ────────────────────────────────────────
 phase "verify-final"
 tsx_run "
-import('./lib/db.ts').then(async (m) => {
-  const kv = (m.default || m).kv || m.kv;
-  const v = await kv.get('verdicts:$SHA');
-  const ps = await kv.get('pause_state:$SHA');
+import('./lib/db-redis.ts').then(async (m) => {
+  const { redisGet, redisDel } = m.default || m;
+  const vRaw = await redisGet('verdicts:$SHA');
+  const v = vRaw ? JSON.parse(vRaw) : null;
+  const psRaw = await redisGet('pause_state:$SHA');
 
-  if (ps !== null) {
+  if (psRaw !== null) {
     console.log('FAIL: pause_state not cleaned after ack');
     process.exit(1);
   }
@@ -172,7 +177,7 @@ import('./lib/db.ts').then(async (m) => {
     process.exit(1);
   }
 
-  await kv.del('verdicts:$SHA');
+  await redisDel('verdicts:$SHA');
   console.log('FINAL OK: acknowledged_at set, pause_state cleaned, verdict intact');
   process.exit(0);
 }).catch(e => { console.error(e); process.exit(1); });
