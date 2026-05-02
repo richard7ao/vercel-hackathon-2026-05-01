@@ -1,0 +1,93 @@
+"use step";
+
+import { score, compoundBonus } from "../../lib/score";
+import { setDeploy } from "../../lib/db";
+
+type ScoreInput = {
+  ingest: {
+    sha?: string;
+    files: unknown[];
+    author: string;
+    pushed_at: string;
+  };
+  signals: {
+    structural?: Record<string, { severity: number }[]>;
+    behavioral?: Record<string, unknown>;
+    temporal?: Record<string, unknown>;
+  };
+};
+
+function maxSeverity(group: Record<string, { severity: number }[]>): number {
+  let max = 0;
+  for (const hits of Object.values(group)) {
+    if (!Array.isArray(hits)) continue;
+    for (const h of hits) {
+      if (typeof h.severity === "number" && h.severity > max) max = h.severity;
+    }
+  }
+  return max;
+}
+
+function bucket(s: number): string {
+  if (s >= 0.8) return "critical";
+  if (s >= 0.6) return "investigate";
+  if (s >= 0.3) return "watch";
+  return "benign";
+}
+
+function buildSignalFlags(signals: ScoreInput["signals"]): Record<string, boolean> {
+  const flags: Record<string, boolean> = {};
+  if (signals.structural) {
+    for (const [key, hits] of Object.entries(signals.structural)) {
+      if (Array.isArray(hits) && hits.length > 0) flags[key] = true;
+    }
+  }
+  if (signals.temporal) {
+    for (const [key, val] of Object.entries(signals.temporal)) {
+      if (val === true) flags[key] = true;
+    }
+  }
+  return flags;
+}
+
+export async function scoreStep(input: ScoreInput) {
+  const structural = maxSeverity(input.signals.structural ?? {});
+  const behavioral = maxSeverity(
+    (input.signals.behavioral ?? {}) as Record<string, { severity: number }[]>
+  );
+  const temporalSev =
+    typeof (input.signals.temporal as Record<string, unknown>)?.severity === "number"
+      ? ((input.signals.temporal as Record<string, unknown>).severity as number)
+      : 0;
+
+  const signalFlags = buildSignalFlags(input.signals);
+  const compounds = compoundBonus({ signals: signalFlags });
+
+  const finalScore = score({
+    structural,
+    behavioral,
+    temporal: temporalSev,
+    compounds,
+  });
+
+  const verdict_bucket = bucket(finalScore);
+
+  if (input.ingest.sha) {
+    try {
+      await setDeploy(input.ingest.sha, {
+        sha: input.ingest.sha,
+        score: finalScore,
+        verdict_bucket,
+        author: input.ingest.author,
+        pushed_at: input.ingest.pushed_at,
+        files_changed: (input.ingest.files as { path: string }[]).map(
+          (f) => f.path
+        ),
+      });
+    } catch {
+      // KV unavailable — proceed without persistence
+    }
+  }
+
+  return { score: finalScore, verdict_bucket };
+}
