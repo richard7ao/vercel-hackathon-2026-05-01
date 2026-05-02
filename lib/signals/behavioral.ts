@@ -50,7 +50,7 @@ export async function detectAuthorPathMismatch(
     return { matched: false, severity: 0, evidence: [] };
   }
 
-  const severity = Math.min(0.4 + novelDirs.length * 0.15, 1.0);
+  const severity = Math.min(0.6 + novelDirs.length * 0.2, 1.0);
   return { matched: true, severity, evidence: novelDirs };
 }
 
