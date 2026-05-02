@@ -23,6 +23,7 @@
 ---
 
 ## What you see
+<img width="1795" height="1037" alt="image" src="https://github.com/user-attachments/assets/ed5df431-92f8-4eec-acf9-4d715d69db4c" />
 
 Open the [live demo](https://vercel-hackathon-2026-05-01.vercel.app) and you land on a Bloomberg-terminal-style war room. It auto-runs a 25-second simulation of a risky deploy: a new hire pushes a change to `lib/auth.ts` at 3:42 AM that adds an outbound `fetch()` to a non-allowlisted host.
 
