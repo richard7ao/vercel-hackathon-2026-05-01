@@ -58,6 +58,30 @@ const SECRET_PATTERNS = [
   /(api[_-]?key|secret)\s*[:=]\s*['"][A-Za-z0-9]{20,}['"]/i,
 ];
 
+function globMatch(pattern: string, path: string): boolean {
+  const re = new RegExp(
+    "^" +
+      pattern
+        .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+        .replace(/\*/g, ".*") +
+      "$"
+  );
+  return re.test(path);
+}
+
+export function detectCriticalPath(
+  file: FileInput,
+  paths: string[]
+): DetectResult {
+  const filePath = file.path ?? "";
+  if (!filePath) return { matched: false, severity: 0, evidence: [] };
+
+  const hit = paths.some((p) => globMatch(p, filePath));
+  if (!hit) return { matched: false, severity: 0, evidence: [] };
+
+  return { matched: true, severity: 0.85, evidence: [] };
+}
+
 export function detectSecretShapes(file: FileInput): DetectResult {
   const patch = file.patch;
   if (!patch) return { matched: false, severity: 0, evidence: [] };
