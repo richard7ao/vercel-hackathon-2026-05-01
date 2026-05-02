@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useDeploysSSE } from "./hooks/useDeploysSSE";
 import { TopBar } from "./components/TopBar";
 import { StatusBlock } from "./components/StatusBlock";
@@ -12,9 +13,11 @@ import { VerdictModal } from "./components/VerdictModal";
 import { CountdownChip } from "./components/CountdownChip";
 import { SuspendedOverlay } from "./components/SuspendedOverlay";
 import { ResumePulse } from "./components/ResumePulse";
+import { RehearsalModal } from "./components/RehearsalModal";
 
 export default function WarRoom() {
   const data = useDeploysSSE();
+  const [rehearsalOpen, setRehearsalOpen] = useState(false);
 
   return (
     <div className="shell">
@@ -61,15 +64,26 @@ export default function WarRoom() {
       />
 
       <div className="demo-ctrl">
-        {!data.running && (
-          <button className="btn primary" onClick={data.runDemo}>
-            ▶ RUN DEMO
+        {data.mode === "demo" && (
+          <>
+            {!data.running && (
+              <button className="btn primary" onClick={data.runDemo}>
+                ▶ RUN DEMO
+              </button>
+            )}
+            <button className="btn" onClick={data.reset}>
+              ↺ RESET
+            </button>
+          </>
+        )}
+        {data.mode === "live" && (
+          <button className="btn primary" onClick={() => setRehearsalOpen(true)}>
+            ◈ REHEARSE
           </button>
         )}
-        <button className="btn" onClick={data.reset}>
-          ↺ RESET
-        </button>
       </div>
+
+      <RehearsalModal open={rehearsalOpen} onClose={() => setRehearsalOpen(false)} />
 
       {data.loopState === "holding" && (
         <CountdownChip nextPlayInMs={data.nextPlayInMs} />
