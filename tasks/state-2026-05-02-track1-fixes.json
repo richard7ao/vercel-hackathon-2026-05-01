@@ -2,10 +2,10 @@
   "schema_version": "2.0",
   "plan_name": "2026-05-02-track1-fixes",
   "spec_path": "docs/superpowers/specs/2026-05-02-track1-fixes-design.md",
-  "last_updated": "2026-05-02T10:58:00.000Z",
-  "current_task": "T3",
-  "current_step": "T3.1",
-  "current_stage": "T3.1.1",
+  "last_updated": "2026-05-02T11:15:00.000Z",
+  "current_task": "T6",
+  "current_step": "T6.1",
+  "current_stage": "T6.1.1",
   "tasks": {
     "T0": {
       "status": "complete",
@@ -100,15 +100,15 @@
       }
     },
     "T3": {
-      "status": "pending",
+      "status": "complete",
       "title": "Real durability test (replace chaos-drill theatre)",
       "steps": {
         "T3.1": {
-          "status": "pending",
+          "status": "complete",
           "title": "Real chaos drill",
           "stages": {
-            "T3.1.1": { "status": "pending", "title": "Implement honest chaos drill" },
-            "T3.1.2": { "status": "pending", "title": "Five consecutive successful runs" }
+            "T3.1.1": { "status": "complete", "title": "Implement honest chaos drill", "completed_at": "2026-05-02T11:14:00.000Z" },
+            "T3.1.2": { "status": "complete", "title": "Five consecutive successful runs", "completed_at": "2026-05-02T11:15:00.000Z" }
           }
         }
       }

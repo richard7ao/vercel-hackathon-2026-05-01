@@ -28,8 +28,9 @@
 - [2026-05-01] SSE event types live in `lib/sse-events.ts` as a discriminated union on `type`.
 - [2026-05-01] KV key conventions documented at the top of `lib/db.ts`.
 - [2026-05-01] Tier 4 server lifecycle: each stage owns its own `next dev -p 3030`.
-- [2026-05-01] Investigators are separate `DurableAgent` sub-workflows under `workflows/investigators/*.ts`.
-- [2026-05-01] Pause/resume uses WDK signal/wait — workflow awaits signal; interaction endpoint sends the signal.
+- [2026-05-01] Investigators: 3 DurableAgent sub-workflows in `workflows/agents/{history,dependency,diff}.ts`, 2 deterministic stubs in `workflows/investigators/{trace,runtime}.ts`. Deterministic fallbacks in `workflows/investigators/*.ts`.
+- [2026-05-02] Pause/resume uses WDK `createHook`/`resumeHook` — watchdog creates a Hook, Discord interaction handler calls `resumeHook(token, payload)` from `workflow/api`.
+- [2026-05-02] AI SDK v6 + Zod v4 tools use `tool()` helper with `inputSchema: zodSchema(z.object({...}))` pattern, not `parameters` directly.
 - [2026-05-02] CJS/ESM interop for tsx: `const mod = await import(...); const { x } = mod.default || mod;`
 - [2026-05-02] KV double-serialization: kv.set already JSON.stringifies, don't wrap values in JSON.stringify
 - [2026-05-02] Dotenv must load before any module that reads env vars
