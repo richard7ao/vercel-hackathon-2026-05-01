@@ -129,11 +129,6 @@ export function buildPageEmbed(input: {
   return { embed, row };
 }
 
-const ED25519_SPKI_PREFIX = Buffer.from(
-  "302a300506032b6570032100",
-  "hex"
-);
-
 export function verifyInteraction(
   rawBody: string,
   signature: string,
@@ -143,8 +138,9 @@ export function verifyInteraction(
   if (!publicKeyHex) return false;
   try {
     const nodeCrypto = require("crypto") as typeof import("crypto");
+    const prefix = Buffer.from("302a300506032b6570032100", "hex");
     const key = nodeCrypto.createPublicKey({
-      key: Buffer.concat([ED25519_SPKI_PREFIX, Buffer.from(publicKeyHex, "hex")]),
+      key: Buffer.concat([prefix, Buffer.from(publicKeyHex, "hex")]),
       format: "der",
       type: "spki",
     });
