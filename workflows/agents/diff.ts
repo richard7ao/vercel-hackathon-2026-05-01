@@ -1,9 +1,11 @@
 "use workflow";
 
-import { DurableAgent } from "@workflow/ai/agent";
-import { tool, zodSchema } from "ai";
+import { fetch } from "workflow";
+import { generateText, tool, zodSchema, stepCountIs } from "ai";
 import { z } from "zod";
 import { getGateway } from "../../lib/ai-gateway";
+
+globalThis.fetch = fetch;
 import { diffDeterministic } from "../investigators/diff";
 import type { InvestigatorInput, InvestigatorResult } from "../investigators/_base";
 import { emitInvestigatorEvent } from "../investigators/_base";
@@ -28,44 +30,33 @@ export async function diffAgent(
   input: InvestigatorInput
 ): Promise<InvestigatorResult> {
   await emitInvestigatorEvent(input.deploy_id, "diff", "dispatched");
+  await emitInvestigatorEvent(input.deploy_id, "diff", "investigating", "analyzing code diffs");
 
-  let agentText = "";
   try {
-    const agent = new DurableAgent({
-      model: () => Promise.resolve(getGateway().chatModel("anthropic/claude-sonnet-4-6")),
-      instructions:
-        "You are a code-diff investigator. Analyze patches for security risks: eval(), exec(), auth bypasses, hardcoded secrets, XSS vectors. Produce a severity assessment: critical, high, medium, or low.",
+    const { text } = await generateText({
+      model: getGateway().chatModel("anthropic/claude-sonnet-4-6"),
       tools: { summarizeDiffChunks },
+      stopWhen: stepCountIs(3),
+      maxOutputTokens: 300,
+      prompt: `You are a code-diff investigator. Analyze these patches for security risks: eval(), exec(), auth bypasses, hardcoded secrets, XSS vectors. Use the tool to summarize diff chunks if needed. End with exactly one of: SEVERITY:critical, SEVERITY:high, SEVERITY:medium, or SEVERITY:low on its own line.
+
+${input.files.map((f) => `--- ${f.path}\n${(f.patch ?? "").slice(0, 2000)}`).join("\n\n")}`,
     });
 
-    const writable = new WritableStream({
-      write(chunk) { if (typeof chunk === "string") agentText += chunk; },
-    });
-    await agent.stream({
-      messages: [
-        {
-          role: "user" as const,
-          content: `Analyze these diffs for security risks:\n${input.files.map((f) => `--- ${f.path}\n${(f.patch ?? "").slice(0, 2000)}`).join("\n\n")}`,
-        },
-      ],
-      writable,
-    });
-  } catch (err) {
-    console.warn("[diffAgent] DurableAgent failed, falling back:", err);
-  }
-
-  if (agentText.length > 20) {
     const severities = ["critical", "high", "medium", "low"] as const;
-    const match = severities.find((s) => agentText.toLowerCase().includes(s));
-    if (match) {
+    const match = severities.find((s) => text.toLowerCase().includes(`severity:${s}`));
+    if (match && text.length > 10) {
+      const summary = text.replace(/SEVERITY:\w+/gi, "").trim().slice(0, 500);
       const result: InvestigatorResult = {
         agent: "diff",
-        status: "complete" as const,
-        finding: { severity: match, summary: agentText.slice(0, 500).trim() },
+        status: "complete",
+        finding: { severity: match, summary },
       };
       await emitInvestigatorEvent(input.deploy_id, "diff", "complete", undefined, result.finding);
       return result;
     }
+  } catch (err) {
+    console.warn("[diffAgent] LLM call failed, falling back:", err);
   }
 
   const fallback = await diffDeterministic(input);

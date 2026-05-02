@@ -104,8 +104,8 @@ This is the core of the submission. Every piece of the investigation pipeline is
 | Component | WDK Primitive | Survives |
 |-----------|--------------|----------|
 | `watchdog.ts` | `"use workflow"` | Function crashes, cold starts |
-| `history.ts`, `dependency.ts`, `diff.ts` | `DurableAgent` sub-workflows | AI Gateway failures, timeouts |
-| `synthesizer.ts` | `DurableAgent` step | Network errors, malformed LLM output |
+| `history.ts`, `dependency.ts`, `diff.ts` | `"use workflow"` + `generateText` | AI Gateway failures, timeouts |
+| `synthesizer.ts` | `"use step"` + `generateObject` | Network errors, malformed LLM output |
 | Human pause | `createHook` / `resumeHook` | Redeploys, hours/days of waiting |
 
 **Chaos drill** (`scripts/chaos-drill.sh`): writes workflow state → SIGKILL the server → restart → verify records survive. Ran 5 consecutive successful drills before submission.
@@ -120,7 +120,7 @@ This is the core of the submission. Every piece of the investigation pipeline is
 |-------|--------|
 | Framework | Next.js 16 · React 19 · Tailwind 4 |
 | Workflows | Vercel WDK (`workflow` 4.2 · `@workflow/ai` 4.1) |
-| LLM | Vercel AI Gateway → `anthropic/claude-sonnet-4-6` via AI SDK 6 |
+| LLM | Claude Opus 4.7 via Anthropic API · AI SDK 6 · Max Effort |
 | Storage | Redis (Vercel Marketplace / Upstash) |
 | Notifications | Discord REST + interaction webhook |
 | Source Ingest | Octokit 5 |
@@ -244,7 +244,7 @@ BRIDGE_TARGET_URL=https://vercel-hackathon-2026-05-01.vercel.app \
 Built solo for the Vercel Community Hackathon, May 2026.
 
 - **Vercel** — Workflow Development Kit, AI Gateway, Fluid Compute, Marketplace Redis
-- **Anthropic** — Claude Sonnet 4.6 (synthesizer + diff inspector)
+- **Anthropic** — Claude Opus 4.7 Max Effort (synthesizer + investigator agents)
 - **Discord** — Bot API + interaction webhook
 - **Octokit** — GitHub API client
 

@@ -1,9 +1,11 @@
 "use workflow";
 
-import { DurableAgent } from "@workflow/ai/agent";
-import { tool, zodSchema } from "ai";
+import { fetch } from "workflow";
+import { generateText, tool, zodSchema, stepCountIs } from "ai";
 import { z } from "zod";
 import { getGateway } from "../../lib/ai-gateway";
+
+globalThis.fetch = fetch;
 import { dependencyDeterministic } from "../investigators/dependency";
 import type { InvestigatorInput, InvestigatorResult } from "../investigators/_base";
 import { emitInvestigatorEvent } from "../investigators/_base";
@@ -28,44 +30,35 @@ export async function dependencyAgent(
   input: InvestigatorInput
 ): Promise<InvestigatorResult> {
   await emitInvestigatorEvent(input.deploy_id, "dependency", "dispatched");
+  await emitInvestigatorEvent(input.deploy_id, "dependency", "investigating", "analyzing dependencies");
 
-  let agentText = "";
   try {
-    const agent = new DurableAgent({
-      model: () => Promise.resolve(getGateway().chatModel("anthropic/claude-sonnet-4-6")),
-      instructions:
-        "You are a dependency investigator. Analyze package.json changes to identify supply-chain risks from new or modified dependencies. Produce a severity assessment: critical, high, medium, or low.",
+    const { text } = await generateText({
+      model: getGateway().chatModel("anthropic/claude-sonnet-4-6"),
       tools: { analyzeManifestDelta },
+      stopWhen: stepCountIs(3),
+      maxOutputTokens: 300,
+      prompt: `You are a dependency investigator. Analyze package.json changes to identify supply-chain risks from new or modified dependencies. Use the tool to extract dependency changes. End with exactly one of: SEVERITY:critical, SEVERITY:high, SEVERITY:medium, or SEVERITY:low on its own line.
+
+Files changed: ${input.files.map((f) => f.path).join(", ")}
+Patches:
+${input.files.filter((f) => f.path.includes("package")).map((f) => `--- ${f.path}\n${(f.patch ?? "").slice(0, 3000)}`).join("\n\n")}`,
     });
 
-    const writable = new WritableStream({
-      write(chunk) { if (typeof chunk === "string") agentText += chunk; },
-    });
-    await agent.stream({
-      messages: [
-        {
-          role: "user" as const,
-          content: `Investigate dependency changes in this commit:\nFiles: ${input.files.map((f) => f.path).join(", ")}\nDeploy: ${input.deploy_id}`,
-        },
-      ],
-      writable,
-    });
-  } catch (err) {
-    console.warn("[dependencyAgent] DurableAgent failed, falling back:", err);
-  }
-
-  if (agentText.length > 20) {
     const severities = ["critical", "high", "medium", "low"] as const;
-    const match = severities.find((s) => agentText.toLowerCase().includes(s));
-    if (match) {
+    const match = severities.find((s) => text.toLowerCase().includes(`severity:${s}`));
+    if (match && text.length > 10) {
+      const summary = text.replace(/SEVERITY:\w+/gi, "").trim().slice(0, 500);
       const result: InvestigatorResult = {
         agent: "dependency",
-        status: "complete" as const,
-        finding: { severity: match, summary: agentText.slice(0, 500).trim() },
+        status: "complete",
+        finding: { severity: match, summary },
       };
       await emitInvestigatorEvent(input.deploy_id, "dependency", "complete", undefined, result.finding);
       return result;
     }
+  } catch (err) {
+    console.warn("[dependencyAgent] LLM call failed, falling back:", err);
   }
 
   const fallback = await dependencyDeterministic(input);

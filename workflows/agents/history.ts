@@ -1,9 +1,11 @@
 "use workflow";
 
-import { DurableAgent } from "@workflow/ai/agent";
-import { tool, zodSchema } from "ai";
+import { fetch } from "workflow";
+import { generateText, tool, zodSchema, stepCountIs } from "ai";
 import { z } from "zod";
 import { kvGet } from "../steps/kv-ops";
+
+globalThis.fetch = fetch;
 import { getGateway } from "../../lib/ai-gateway";
 import { historyDeterministic } from "../investigators/history";
 import type { InvestigatorInput, InvestigatorResult } from "../investigators/_base";
@@ -24,16 +26,16 @@ const lookupAuthorHistory = tool({
   },
 });
 
-const lookupCochangeHistory = tool({
-  description: "Look up co-change frequency for a file path",
+const lookupHourHistory = tool({
+  description: "Look up hour-of-day edit frequency for a file path",
   inputSchema: zodSchema(z.object({ filePath: z.string() })),
   execute: async ({ filePath }: { filePath: string }) => {
     try {
-      const raw = await kvGet<number[] | string>(`history:cochange:${filePath}`);
+      const raw = await kvGet<number[] | string>(`history:hour:${filePath}`);
       if (Array.isArray(raw)) return raw;
       if (typeof raw === "string") return JSON.parse(raw);
     } catch (err) {
-      console.warn("[historyAgent] cochange lookup failed:", err);
+      console.warn("[historyAgent] hour lookup failed:", err);
     }
     return null;
   },
@@ -43,44 +45,35 @@ export async function historyAgent(
   input: InvestigatorInput
 ): Promise<InvestigatorResult> {
   await emitInvestigatorEvent(input.deploy_id, "history", "dispatched");
+  await emitInvestigatorEvent(input.deploy_id, "history", "investigating", "analyzing author history");
 
-  let agentText = "";
   try {
-    const agent = new DurableAgent({
-      model: () => Promise.resolve(getGateway().chatModel("anthropic/claude-sonnet-4-6")),
-      instructions:
-        "You are a commit-history investigator. Analyze whether the commit author is operating outside their usual areas. Use the provided tools to look up author history and co-change patterns. Produce a severity assessment: critical, high, medium, or low.",
-      tools: { lookupAuthorHistory, lookupCochangeHistory },
+    const { text } = await generateText({
+      model: getGateway().chatModel("anthropic/claude-sonnet-4-6"),
+      tools: { lookupAuthorHistory, lookupHourHistory },
+      stopWhen: stepCountIs(3),
+      maxOutputTokens: 300,
+      prompt: `You are a commit-history investigator. Analyze whether this author is operating outside their usual areas or at unusual hours. Use the tools to check. End with exactly one of: SEVERITY:critical, SEVERITY:high, SEVERITY:medium, or SEVERITY:low on its own line.
+
+Author: ${input.author ?? "unknown"}
+Files: ${input.files.map((f) => f.path).join(", ")}
+Current UTC hour: ${new Date().getUTCHours()}`,
     });
 
-    const writable = new WritableStream({
-      write(chunk) { if (typeof chunk === "string") agentText += chunk; },
-    });
-    await agent.stream({
-      messages: [
-        {
-          role: "user" as const,
-          content: `Investigate this commit for history anomalies:\nAuthor: ${input.author ?? "unknown"}\nFiles: ${input.files.map((f) => f.path).join(", ")}\nDeploy: ${input.deploy_id}`,
-        },
-      ],
-      writable,
-    });
-  } catch (err) {
-    console.warn("[historyAgent] DurableAgent failed, falling back:", err);
-  }
-
-  if (agentText.length > 20) {
     const severities = ["critical", "high", "medium", "low"] as const;
-    const match = severities.find((s) => agentText.toLowerCase().includes(s));
-    if (match) {
+    const match = severities.find((s) => text.toLowerCase().includes(`severity:${s}`));
+    if (match && text.length > 10) {
+      const summary = text.replace(/SEVERITY:\w+/gi, "").trim().slice(0, 500);
       const result: InvestigatorResult = {
         agent: "history",
-        status: "complete" as const,
-        finding: { severity: match, summary: agentText.slice(0, 500).trim() },
+        status: "complete",
+        finding: { severity: match, summary },
       };
       await emitInvestigatorEvent(input.deploy_id, "history", "complete", undefined, result.finding);
       return result;
     }
+  } catch (err) {
+    console.warn("[historyAgent] LLM call failed, falling back:", err);
   }
 
   const fallback = await historyDeterministic(input);
