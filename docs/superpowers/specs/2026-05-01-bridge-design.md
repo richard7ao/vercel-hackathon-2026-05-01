@@ -12,7 +12,7 @@
 - **`track-info.md`** — hackathon track resources, links, and quick-start commands for WDK.
 - **Claude design URL** — `https://api.anthropic.com/v1/design/h/Ry1KGi5XlJWoDA1GfmhpHw` (gated; not directly fetchable; the war-room/ folder is the local mirror).
 
-**Conflict resolution:** When `raw_prompt.md` and `war-room/` disagree, `war-room/` wins for visual specifics; `raw_prompt.md` wins for backend behavior. Recorded conflicts: (1) `war-room/app.jsx` runs all 5 investigator agents in the demo, while raw_prompt §4c says to stub TRACE and RUNTIME — resolved by implementing a `mode` flag (`demo` runs all 5 with synthesized data; `production` shows N/A for trace+runtime). (2) `war-room/components.jsx` shows `acme/control-plane` as a hardcoded crumb — resolved by reading from `MONITORED_REPO` env var with `meridian/core-banking` as the configured value. (3) `war-room/components.jsx` shows a hardcoded `BUDGET 42% remaining` crumb — replaced in T8.1.7 with a live tick-down tied to WDK observability cost telemetry.
+**Conflict resolution:** When `raw_prompt.md` and `war-room/` disagree, `war-room/` wins for visual specifics; `raw_prompt.md` wins for backend behavior. Recorded conflicts: (1) `war-room/app.jsx` runs all 5 investigator agents in the demo, while raw_prompt §4c says to stub TRACE and RUNTIME — resolved by implementing a `mode` flag (`demo` runs all 5 with synthesized data; `production` shows N/A for trace+runtime). (2) `war-room/components.jsx` shows `acme/control-plane` as a hardcoded crumb — resolved by reading from `MONITORED_REPO` env var with `meridian/core-banking` as the configured value. (3) `war-room/components.jsx` shows a hardcoded `BUDGET 42% remaining` crumb — replaced in T8.1.9 with a live tick-down tied to WDK observability cost telemetry.
 
 ## Project Topology
 
@@ -463,6 +463,92 @@ npx tsx --input-type=module -e "const mod = await import('./app/(warroom)/hooks/
 ```bash
 # tier4_integration
 (npx next dev -p 3030 > /tmp/dev-t033.log 2>&1 &) && for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do curl -fsS http://localhost:3030 > /dev/null 2>&1 && break; sleep 1; done && curl -fsS http://localhost:3030 | grep -q 'ALL CLEAR'; ec=$?; pkill -f 'next dev.*3030' || true; exit $ec
+```
+
+#### T0.3.4 — Demo autoplay loop + countdown chip
+
+**Description:** Make `useDemo` loop indefinitely so a judge landing on the deployed URL at any time sees the full 25-second beat without a click. Behavior:
+
+1. **First play:** auto-start 3s after first paint (already specced in T0.3.3).
+2. **Final hold:** at t=25s the demo enters "FINAL STATE" hold for `LOOP_HOLD_MS` (default 8000ms — configurable via env / prop).
+3. **Reset + replay:** after the hold, call the existing `reset()` and immediately `runDemo()` again. Loop indefinitely.
+4. **Countdown chip:** a small UI affordance bottom-left during the hold: `[ NEXT PLAY · 0:08 ]` with a 1Hz tick down. Disappears once the next play begins. Only visible in `mode='demo'`.
+5. **Pause-on-interaction:** if the user clicks RUN DEMO or RESET (T8.1.1) during a hold, cancel the auto-replay timer — they took control. Auto-replay resumes 30s after the user's last interaction.
+6. **No loop in `mode='live'`:** loop logic is gated on `mode==='demo'`. Live mode behaves exactly as before — no auto-replay.
+
+Implement in `useDemo` (extend the hook returning a `loopState: 'playing' | 'holding' | 'paused-by-user'` and a `nextPlayInMs: number`) and `app/(warroom)/components/CountdownChip.tsx`.
+
+**Requires:** T0.3.3
+
+**Verify:**
+
+```bash
+# tier1_build
+npx tsc --noEmit --strict -p tsconfig.json && npx next build > /tmp/t034.log 2>&1 && grep -q "Compiled successfully" /tmp/t034.log
+```
+
+```bash
+# tier2_simplify
+echo "Dispatch code-simplifier:code-simplifier on: app/(warroom)/hooks/useDemo.ts app/(warroom)/components/CountdownChip.tsx"
+```
+
+```bash
+# tier3_unit
+# 7 cases: loop state machine (initial → playing → holding → playing) + interaction pause + mode gating + countdown decrement.
+npx tsx --input-type=module -e "
+import { computeLoopState, computeNextPlayInMs } from './app/(warroom)/hooks/useDemo.ts';
+
+// computeLoopState({ phase: 'playing' | 'holding' | 'paused-by-user', mode })
+const cases = [
+  { name: 'demo + initial → playing-pending (3s startup)', input: { phase: 'initial', mode: 'demo', sinceMs: 1000 }, expect: 'playing-pending' },
+  { name: 'demo + initial → playing once 3s elapsed', input: { phase: 'initial', mode: 'demo', sinceMs: 3500 }, expect: 'playing' },
+  { name: 'demo + holding → still holding before 8s', input: { phase: 'holding', mode: 'demo', sinceMs: 4000 }, expect: 'holding' },
+  { name: 'demo + holding → playing once hold expired', input: { phase: 'holding', mode: 'demo', sinceMs: 9000 }, expect: 'playing' },
+  { name: 'demo + paused-by-user → still paused before 30s', input: { phase: 'paused-by-user', mode: 'demo', sinceMs: 15000 }, expect: 'paused-by-user' },
+  { name: 'demo + paused-by-user → resumed-playing once 30s elapsed', input: { phase: 'paused-by-user', mode: 'demo', sinceMs: 31000 }, expect: 'playing' },
+  { name: 'live + holding → no replay (live mode does not loop)', input: { phase: 'holding', mode: 'live', sinceMs: 60000 }, expect: 'holding' },
+];
+for (const c of cases) {
+  const got = computeLoopState(c.input);
+  if (got !== c.expect) { console.error('FAIL', c.name, 'expected', c.expect, 'got', got); process.exit(1); }
+}
+
+// computeNextPlayInMs decrements correctly
+const a = computeNextPlayInMs({ phase: 'holding', sinceMs: 0, holdMs: 8000 });
+const b = computeNextPlayInMs({ phase: 'holding', sinceMs: 3000, holdMs: 8000 });
+const c0 = computeNextPlayInMs({ phase: 'holding', sinceMs: 9000, holdMs: 8000 });
+if (a !== 8000 || b !== 5000 || c0 !== 0) { console.error('countdown decrement wrong:', a, b, c0); process.exit(1); }
+
+// Live mode → countdown function returns null (no loop)
+const live = computeNextPlayInMs({ phase: 'holding', sinceMs: 0, holdMs: 8000, mode: 'live' });
+if (live !== null) { console.error('live mode should return null countdown, got', live); process.exit(1); }
+
+console.log('OK ' + cases.length + ' state-machine cases + countdown decrement + mode gating');
+"
+```
+
+```bash
+# tier4_integration
+# E2E: load page in demo mode, wait through one full cycle (25s play + 8s hold + replay), confirm a deploy event appears TWICE in the SSR-streamed history.
+(npx next dev -p 3030 > /tmp/dev-t034.log 2>&1 &) && for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do curl -fsS http://localhost:3030 > /dev/null 2>&1 && break; sleep 1; done
+
+# Snapshot 1: just after first paint
+sleep 5
+curl -fsS http://localhost:3030 | grep -q 'NEXT PLAY\|FINAL STATE\|MONITORING\|CRITICAL\|ALL CLEAR' || { echo "no demo state visible at t=5"; pkill -f 'next dev.*3030'; exit 1; }
+
+# Snapshot 2: after the hold should have started (t > 28s) — countdown chip should be present
+sleep 25
+SNAP=$(curl -fsS http://localhost:3030)
+echo "$SNAP" | grep -q 'NEXT PLAY' || { echo "countdown chip missing during hold phase"; pkill -f 'next dev.*3030'; exit 1; }
+
+# Snapshot 3: after the replay should have started (t > 36s) — should be back into demo flow, NOT in FINAL STATE anymore
+sleep 12
+SNAP2=$(curl -fsS http://localhost:3030)
+echo "$SNAP2" | grep -q 'FINAL STATE' && { echo "still in FINAL STATE — loop did not reset"; pkill -f 'next dev.*3030'; exit 1; }
+
+ec=0; pkill -f 'next dev.*3030' || true
+echo "OK demo loop replays after hold"
+exit $ec
 ```
 
 ### T0.4 — Demo target repo
@@ -1478,7 +1564,7 @@ npx tsx --input-type=module -e "import('./workflows/watchdog.ts').then(async ({ 
 
 #### T3.1.1 — `lib/sse-events.ts` typed shapes
 
-**Description:** Export TypeScript types for `StatusEvent`, `DeployEvent`, `InvestigatorEvent`, `FeedEvent`, `VerdictEvent`, `ThreatSurfaceEvent` matching raw_prompt §"Live Data" verbatim. Discriminated union on `type` field. `VerdictEvent` must include Slack ack fields: `acknowledged?: boolean`, `acknowledged_by?: string`, `action_taken?: 'ack' | 'hold' | 'page'` — these are set by the Slack pause/resume flow (T5.1.6) and consumed by the VerdictModal badge (T5.1.7) and SuspendedOverlay (T8.1.5). Also export type guards (`isStatusEvent`, `isDeployEvent`, `isInvestigatorEvent`, `isFeedEvent`, `isVerdictEvent`, `isThreatSurfaceEvent`) and a `parseSSEEvent(line: string)` helper that parses one raw SSE `data: ...` line into a typed event (returns `null` on parse failure or unknown `type`). The runtime helpers give T3.1.2's reducer a single dispatch point and give this stage real behavior to verify.
+**Description:** Export TypeScript types for `StatusEvent`, `DeployEvent`, `InvestigatorEvent`, `FeedEvent`, `VerdictEvent`, `ThreatSurfaceEvent` matching raw_prompt §"Live Data" verbatim. Discriminated union on `type` field. `VerdictEvent` must include Slack ack fields: `acknowledged?: boolean`, `acknowledged_by?: string`, `action_taken?: 'ack' | 'hold' | 'page'` — these are set by the Slack pause/resume flow (T5.1.6) and consumed by the VerdictModal badge (T5.1.7) and SuspendedOverlay (T8.1.7). Also export type guards (`isStatusEvent`, `isDeployEvent`, `isInvestigatorEvent`, `isFeedEvent`, `isVerdictEvent`, `isThreatSurfaceEvent`) and a `parseSSEEvent(line: string)` helper that parses one raw SSE `data: ...` line into a typed event (returns `null` on parse failure or unknown `type`). The runtime helpers give T3.1.2's reducer a single dispatch point and give this stage real behavior to verify.
 
 **Requires:** T2.6.1
 
@@ -1506,7 +1592,7 @@ npx tsx --input-type=module -e "import('./lib/sse-events.ts').then((m) => { cons
 
 #### T3.1.2 — `useDeploysSSE()` hook
 
-**Description:** React hook that opens an `EventSource` against `/api/stream/deploys`, parses events into typed shapes, and dispatches them to a reducer that maintains the war-room state. Has a `mode: 'demo' | 'live'` switch — `demo` falls back to the existing `useDemo` mock orchestration, `live` reads from SSE. Default `mode='live'` in production, `mode='demo'` in dev/preview unless `?live=1`.
+**Description:** React hook that opens an `EventSource` against `/api/stream/deploys`, parses events into typed shapes, and dispatches them to a reducer that maintains the war-room state. Has a `mode: 'demo' | 'live'` switch — `demo` runs the `useDemo` mock orchestration (autoplay loop per T0.3.4), `live` reads from real SSE. **Default `mode='demo'` in BOTH production and dev** so the deployed URL sells the project to a judge who lands on it cold; `mode='live'` requires explicit opt-in via `?live=1` URL param OR the in-page toggle (T8.1.5). Mode persists to `localStorage` under key `bridge.mode` so a bookmark survives the round-trip. Switching modes resets the reducer (mock state cleared on demo→live; mock state restarted on live→demo).
 
 **Requires:** T3.1.1
 
@@ -2092,7 +2178,7 @@ npx tsx --input-type=module -e "import('./workflows/watchdog.ts').then(async ({ 
 
 **Description:** Watchdog awaits a WDK signal named `slack:ack:{deploy_id}`. Workflow pauses durably until the signal arrives. The wait has a configurable `WDK_PAUSE_MAX_SECONDS` (default 24h) timeout — if exceeded, workflow auto-resolves with `action_taken: 'timeout'`. Pause is reported to KV at `pause_state:{deploy_id} = { paused_at, expected_signal, timeout_at }` so the war room can display countdown. Resume requires payload shape `{ action_type: 'ack' | 'hold' | 'page', user: { id, username } }`; malformed payloads are rejected (workflow stays paused).
 
-**THIS IS THE WDK MONEY SHOT.** The chaos drill in T8.1.8 KILLS the dev server while watchdog is paused — the workflow MUST resume cleanly when the server restarts. That's the durability story.
+**THIS IS THE WDK MONEY SHOT.** The chaos drill in T8.1.10 KILLS the dev server while watchdog is paused — the workflow MUST resume cleanly when the server restarts. That's the durability story.
 
 **Requires:** T5.1.3
 
@@ -2201,9 +2287,9 @@ for (const s of [sha, sha2]) {
 
 console.log('OK pause+resume · pause_state KV · malformed-ack rejected · resume eventually');
 "
-# (3) The durability/chaos test is exercised in T8.1.8 against real next dev. This stage proves the primitive works
-# without server-process death; T8.1.8 proves it works ACROSS server-process death.
-echo "OK pause primitive verified end-to-end (chaos coverage in T8.1.8)"
+# (3) The durability/chaos test is exercised in T8.1.10 against real next dev. This stage proves the primitive works
+# without server-process death; T8.1.10 proves it works ACROSS server-process death.
+echo "OK pause primitive verified end-to-end (chaos coverage in T8.1.10)"
 ```
 
 #### T5.1.5 — `app/api/slack/interactive/route.ts`
@@ -3162,7 +3248,208 @@ npx tsx --input-type=module -e "import('react-dom/server').then(async ({ renderT
 (npx next dev -p 3030 > /tmp/dev-t814.log 2>&1 &) && for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do curl -fsS http://localhost:3030 > /dev/null 2>&1 && break; sleep 1; done && curl -fsS http://localhost:3030 | grep -q -E 'Inspector Agent|Agent · '; ec=$?; pkill -f 'next dev.*3030' || true; exit $ec
 ```
 
-#### T8.1.5 — Cinematic: WORKFLOW SUSPENDED overlay + resume green pulse + PAGE pulse
+#### T8.1.5 — Mode toggle (DEMO ↔ LIVE) in TopBar
+
+**Description:** Replace the existing static `[LIVE]` chip in TopBar with a *toggle* that flips `useDeploysSSE`'s `mode` between `'demo'` and `'live'`. Visual + behavior:
+
+- Position: top-right of TopBar, next to the UTC clock.
+- States:
+  - `mode='demo'` → `[ DEMO · auto-loop ]` with an amber pulsing dot. Tooltip on hover: *"Watching a 25-second simulation. Click to switch to live monitoring."*
+  - `mode='live'` (connected to real SSE) → `[ LIVE · connected · 4ms ]` with a green pulsing dot. Tooltip: *"Real-time feed from production deploys. Click to switch back to simulation."*
+  - `mode='live'` (SSE disconnected / failing) → `[ LIVE · reconnecting ]` with an amber dot. Auto-recovers when SSE reconnects.
+- Click flips mode. State machine actions:
+  - On demo→live: pause the autoplay loop (T0.3.4), clear mock state from reducer, attach EventSource to `/api/stream/deploys`, fetch latest history.
+  - On live→demo: detach EventSource, restore initial mock state, restart autoplay loop.
+- Persistence: write `bridge.mode` to `localStorage` AND update URL via `history.replaceState` to `?live=1` (live) or no param (demo). On subsequent loads, URL param wins; localStorage is fallback.
+- Honest labeling: in DEMO mode, EVERY data row in the war room is rendered with a small `· sim` superscript suffix (only shows when explicitly looking — not visually noisy). This prevents a judge from confusing simulation data with real activity. Live mode hides these.
+
+Implement in `app/(warroom)/components/ModeToggle.tsx` and update `app/(warroom)/components/TopBar.tsx` to consume it. Reducer changes in `app/(warroom)/hooks/useDeploysSSE.ts` per T3.1.2's "switching modes resets the reducer" clause.
+
+**Requires:** T8.1.4
+
+**Verify:**
+
+```bash
+# tier1_build
+npx tsc --noEmit --strict -p tsconfig.json && npx next build > /tmp/t815.log 2>&1 && grep -q "Compiled successfully" /tmp/t815.log
+```
+
+```bash
+# tier2_simplify
+echo "Dispatch code-simplifier:code-simplifier on: app/(warroom)/components/ModeToggle.tsx app/(warroom)/components/TopBar.tsx app/(warroom)/hooks/useDeploysSSE.ts"
+```
+
+```bash
+# tier3_unit
+# 7 cases: rendering by mode/status + URL-param resolution + localStorage persistence + sim suffix.
+npx tsx --input-type=module -e "
+import { renderToString } from 'react-dom/server';
+import React from 'react';
+import { ModeToggle } from './app/(warroom)/components/ModeToggle.tsx';
+import { resolveInitialMode } from './app/(warroom)/hooks/useDeploysSSE.ts';
+
+// Render variants
+const renders = [
+  { mode: 'demo', sseStatus: 'idle', expectText: 'DEMO', expectColor: 'amber' },
+  { mode: 'live', sseStatus: 'connected', expectText: 'LIVE', expectColor: 'green' },
+  { mode: 'live', sseStatus: 'reconnecting', expectText: 'reconnecting', expectColor: 'amber' },
+];
+for (const r of renders) {
+  const html = renderToString(React.createElement(ModeToggle, r));
+  if (!html.includes(r.expectText)) { console.error('FAIL render', r, '— expected text', r.expectText); process.exit(1); }
+  if (!html.includes('data-color=\"' + r.expectColor + '\"')) { console.error('FAIL color', r, '— expected', r.expectColor); process.exit(1); }
+}
+
+// resolveInitialMode: URL param > localStorage > default('demo')
+const cases = [
+  { name: 'no signals → demo', url: '', ls: null, expect: 'demo' },
+  { name: '?live=1 → live', url: '?live=1', ls: null, expect: 'live' },
+  { name: '?live=0 → demo (explicit override)', url: '?live=0', ls: 'live', expect: 'demo' },
+  { name: 'no url, ls=live → live', url: '', ls: 'live', expect: 'live' },
+  { name: 'url wins over ls', url: '?live=1', ls: 'demo', expect: 'live' },
+  { name: 'unknown ls value → demo (default)', url: '', ls: 'banana', expect: 'demo' },
+];
+for (const c of cases) {
+  const got = resolveInitialMode({ search: c.url, localStorageMode: c.ls });
+  if (got !== c.expect) { console.error('FAIL resolveInitialMode', c.name, 'expected', c.expect, 'got', got); process.exit(1); }
+}
+
+console.log('OK ' + renders.length + ' render variants + ' + cases.length + ' resolveInitialMode cases');
+"
+```
+
+```bash
+# tier4_integration
+# E2E: visit URL with no params, confirm DEMO chip; visit with ?live=1, confirm LIVE; flip via the toggle and confirm URL updates.
+(npx next dev -p 3030 > /tmp/dev-t815.log 2>&1 &) && for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do curl -fsS http://localhost:3030 > /dev/null 2>&1 && break; sleep 1; done
+
+# (1) Default → DEMO
+DEFAULT=$(curl -fsS http://localhost:3030)
+echo "$DEFAULT" | grep -q 'DEMO' || { echo "default landing should show DEMO chip"; pkill -f 'next dev.*3030'; exit 1; }
+echo "$DEFAULT" | grep -q 'auto-loop\|simulation' || { echo "DEMO chip should mention auto-loop or simulation"; pkill -f 'next dev.*3030'; exit 1; }
+
+# (2) ?live=1 → LIVE
+LIVE=$(curl -fsS 'http://localhost:3030/?live=1')
+echo "$LIVE" | grep -q 'LIVE' || { echo "?live=1 should show LIVE chip"; pkill -f 'next dev.*3030'; exit 1; }
+
+# (3) Sim-suffix annotation visible in DEMO mode (honest labeling)
+echo "$DEFAULT" | grep -q '· sim\|class=\"sim-suffix\"' || { echo "DEMO mode should annotate data rows with sim suffix"; pkill -f 'next dev.*3030'; exit 1; }
+
+# (4) Sim-suffix HIDDEN in LIVE mode
+echo "$LIVE" | grep -q 'class=\"sim-suffix\"' && { echo "LIVE mode should NOT show sim-suffix annotations"; pkill -f 'next dev.*3030'; exit 1; }
+
+ec=0; pkill -f 'next dev.*3030' || true
+echo "OK default=DEMO · ?live=1=LIVE · sim-suffix only in demo"
+exit $ec
+```
+
+#### T8.1.6 — First-paint legend + ARCH tab + source/video links in TopBar
+
+**Description:** Three small "judge UX" affordances that let the deployed URL sell itself in 30 seconds without clicking through to README:
+
+1. **First-paint legend card.** A 200×120px card pinned bottom-left for the first 8 seconds of the page. Content (~60 words):
+   > **What you're watching:** a 25-second simulation of how Bridge investigates a risky deploy. Pushed code is scored across structural, behavioral, and temporal signals; high-risk pushes dispatch 5 specialist agents in parallel; a synthesizer collapses findings into a verdict; a human pauses or acknowledges via Slack. Every workflow is durable — it survives crashes, redeploys, and pauses for as long as humans need.
+
+   Auto-fades after 8s. Reappears on click of a small `[ ? ]` button bottom-left. Dismissible via `[ x ]` corner. Only shown in `mode='demo'` (live mode users don't need the explainer).
+
+2. **ARCH tab.** Small `[ ARCH ]` button bottom-right, opens an inline modal with an SVG architecture diagram of the workflow tree:
+   ```
+   webhook → ingest → signals (structural · behavioral · temporal · compounds)
+                          ↓
+                       score → if ≥0.6: dispatch 5 agents in parallel
+                                   ↓                ↓               ↓
+                              [ history ] [ runtime/trace ] [ dependency · diff ]
+                                                      ↓
+                                                synthesizer
+                                                      ↓
+                                              Slack page (PAUSE)
+                                                      ↓
+                                              human ack/hold/page
+                                                      ↓
+                                                resume → done
+   ```
+   Each box is clickable → highlights the corresponding panel in the war room and shows a 1-line description. Closes on Esc or click-outside.
+
+3. **Source + video links in TopBar.** Two new chips next to the mode toggle:
+   - `[ ▶ VIDEO ]` opens an embedded video modal (YouTube `iframe` of the URL captured in T9.1.3). If `.demo-video-urls` is unavailable at build time, the chip is hidden.
+   - `[ ⌥ GITHUB ]` is an `<a>` to the public repo URL (`PUBLIC_REPO_URL` env, captured in T0.2.3 / set in T10.1.1).
+
+Implement in `app/(warroom)/components/LegendCard.tsx`, `app/(warroom)/components/ArchTab.tsx`, plus updates to `TopBar.tsx`. SVG diagram in `app/(warroom)/components/ArchDiagram.tsx`.
+
+**Requires:** T8.1.5
+
+**Verify:**
+
+```bash
+# tier1_build
+npx tsc --noEmit --strict -p tsconfig.json && npx next build > /tmp/t816.log 2>&1 && grep -q "Compiled successfully" /tmp/t816.log
+```
+
+```bash
+# tier2_simplify
+echo "Dispatch code-simplifier:code-simplifier on: app/(warroom)/components/LegendCard.tsx app/(warroom)/components/ArchTab.tsx app/(warroom)/components/ArchDiagram.tsx app/(warroom)/components/TopBar.tsx"
+```
+
+```bash
+# tier3_unit
+# 8 cases: legend visibility logic + ARCH diagram nodes + topbar link rendering + dismissibility.
+npx tsx --input-type=module -e "
+import { renderToString } from 'react-dom/server';
+import React from 'react';
+import { LegendCard } from './app/(warroom)/components/LegendCard.tsx';
+import { ArchDiagram } from './app/(warroom)/components/ArchDiagram.tsx';
+import { TopBar } from './app/(warroom)/components/TopBar.tsx';
+
+// Legend visibility
+const legendCases = [
+  { name: 'demo + first-paint window → visible', props: { mode: 'demo', elapsedMs: 3000, dismissed: false }, expectVisible: true },
+  { name: 'demo + after 8s → hidden (auto-fade)', props: { mode: 'demo', elapsedMs: 9000, dismissed: false }, expectVisible: false },
+  { name: 'demo + dismissed → hidden', props: { mode: 'demo', elapsedMs: 3000, dismissed: true }, expectVisible: false },
+  { name: 'live + first-paint window → hidden (live mode never shows legend)', props: { mode: 'live', elapsedMs: 3000, dismissed: false }, expectVisible: false },
+];
+for (const c of legendCases) {
+  const html = renderToString(React.createElement(LegendCard, c.props));
+  const visible = html.includes('What you') && !html.includes('display:none') && !html.includes('aria-hidden=\"true\"');
+  if (visible !== c.expectVisible) { console.error('FAIL legend', c.name, 'expected', c.expectVisible, 'got', visible); process.exit(1); }
+}
+
+// ARCH diagram has all expected nodes
+const arch = renderToString(React.createElement(ArchDiagram, {}));
+for (const node of ['webhook','ingest','signals','score','synthesizer','Slack page','resume']) {
+  if (!arch.includes(node)) { console.error('ARCH diagram missing node:', node); process.exit(1); }
+}
+
+// TopBar: VIDEO chip presence depends on PUBLIC_VIDEO_URL env
+process.env.PUBLIC_VIDEO_URL = 'https://youtu.be/abc123';
+process.env.PUBLIC_REPO_URL = 'https://github.com/x/y';
+const tb1 = renderToString(React.createElement(TopBar, { activeDeploy: null }));
+if (!tb1.includes('VIDEO')) { console.error('TopBar should show VIDEO chip when PUBLIC_VIDEO_URL is set'); process.exit(1); }
+if (!tb1.includes('GITHUB')) { console.error('TopBar should show GITHUB chip when PUBLIC_REPO_URL is set'); process.exit(1); }
+
+delete process.env.PUBLIC_VIDEO_URL;
+const tb2 = renderToString(React.createElement(TopBar, { activeDeploy: null }));
+if (tb2.includes('VIDEO')) { console.error('TopBar should HIDE VIDEO chip when PUBLIC_VIDEO_URL is unset'); process.exit(1); }
+
+console.log('OK ' + legendCases.length + ' legend cases + ARCH nodes + TopBar conditional links');
+"
+```
+
+```bash
+# tier4_integration
+# E2E: legend card visible on first paint, ARCH button opens diagram, GITHUB chip is an anchor with href.
+(npx next dev -p 3030 > /tmp/dev-t816.log 2>&1 &) && for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do curl -fsS http://localhost:3030 > /dev/null 2>&1 && break; sleep 1; done
+
+PAGE=$(curl -fsS http://localhost:3030)
+echo "$PAGE" | grep -q "What you're watching" || { echo "legend missing on first paint"; pkill -f 'next dev.*3030'; exit 1; }
+echo "$PAGE" | grep -q '\[ ARCH \]\|class="arch-tab"' || { echo "ARCH tab button missing"; pkill -f 'next dev.*3030'; exit 1; }
+echo "$PAGE" | grep -qE '<a[^>]+href="https://github.com/' || { echo "GITHUB chip should render as anchor"; pkill -f 'next dev.*3030'; exit 1; }
+
+ec=0; pkill -f 'next dev.*3030' || true
+echo "OK legend + ARCH tab + GITHUB anchor present"
+exit $ec
+```
+
+#### T8.1.7 — Cinematic: WORKFLOW SUSPENDED overlay + resume green pulse + PAGE pulse
 
 **Description:** Three coordinated visual beats that make the durability story *legible without narration*:
 
@@ -3172,7 +3459,7 @@ npx tsx --input-type=module -e "import('react-dom/server').then(async ({ renderT
 
 Implement in `app/(warroom)/components/SuspendedOverlay.tsx`, `app/(warroom)/components/ResumePulse.tsx`, plus CSS keyframes in `app/globals.css`. The overlay is mounted in `page.tsx` and reads `verdict.acknowledged === false && verdict.level === 'critical'` to decide visibility.
 
-**Requires:** T8.1.4
+**Requires:** T8.1.6
 
 **Verify:**
 
@@ -3235,7 +3522,7 @@ npx tsx --input-type=module -e "import { kv } from './lib/db.ts'; import 'dotenv
 exit $ec
 ```
 
-#### T8.1.6 — Cinematic: animated risk-score arc + smooth token-tick on agent cards
+#### T8.1.8 — Cinematic: animated risk-score arc + smooth token-tick on agent cards
 
 **Description:** Two reveal-style animations:
 
@@ -3244,7 +3531,7 @@ exit $ec
 
 Implement in `app/(warroom)/components/RiskScoreArc.tsx` and `app/(warroom)/hooks/useTickedNumber.ts`. Wire RiskScoreArc into StatusBlock.tsx (replacing the static `<span className="tab-num">{score}</span>`). Wire useTickedNumber into AgentCard.tsx and StatusBlock.tsx.
 
-**Requires:** T8.1.5
+**Requires:** T8.1.7
 
 **Verify:**
 
@@ -3310,7 +3597,7 @@ npx tsx --input-type=module -e "import { kv } from './lib/db.ts'; import 'dotenv
 exit $ec
 ```
 
-#### T8.1.7 — Cinematic: live budget tick-down + state-flip snap + scan-line shimmer
+#### T8.1.9 — Cinematic: live budget tick-down + state-flip snap + scan-line shimmer
 
 **Description:** Three smaller polish beats that compound:
 
@@ -3320,7 +3607,7 @@ exit $ec
 
 Implement: `lib/cost-meter.ts`, update `app/(warroom)/components/StatusBlock.tsx` and `AgentCard.tsx`, add CSS keyframes `state-flash-critical`, `state-flash-clear`, `agent-scan` to `globals.css`.
 
-**Requires:** T8.1.6
+**Requires:** T8.1.8
 
 **Verify:**
 
@@ -3374,7 +3661,7 @@ npx tsx --input-type=module -e "import { kv } from './lib/db.ts'; import 'dotenv
 exit $ec
 ```
 
-#### T8.1.8 — Run full demo end-to-end 3+ times INCLUDING a chaos drill
+#### T8.1.10 — Run full demo end-to-end 3+ times INCLUDING a chaos drill
 
 **Description:** Four rehearsal passes — three normal (the headline scenario A), plus a fourth chaos drill that proves the WDK durability claim:
 
@@ -3385,7 +3672,7 @@ exit $ec
 
 Capture timing for all 4 passes into `.claude/memory.md` Gotchas if any flake. The chaos drill MUST succeed — that's the actual demo proof.
 
-**Requires:** T8.1.7
+**Requires:** T8.1.9
 
 **Verify:**
 
@@ -3429,7 +3716,11 @@ echo "OK 3 normal rehearsals + 1 chaos drill = 4 passes"
 
 ## T9 — Record Demo Video
 
-**Description:** Insurance against live demo failure. NON-NEGOTIABLE per raw_prompt. All stages here are **docs-only** — Tier 1, 3, 4 are skipped with justification (the surface is the recorded video file, not code; correctness is verified by human review).
+**Description:** **PRIMARY DELIVERABLE.** Live demos may not happen — the hackathon submission flow has judges potentially picking winners from submissions alone. The video IS the demo for those judges. NON-NEGOTIABLE.
+
+This task can run in parallel with T8 polish: as soon as the Slack pause/resume flow (T5) works end-to-end, an MVP cut of the video can be recorded. Re-record at the end with all polish (T8.1.5–9) applied. The MVP cut acts as a fallback if the polish doesn't land in time.
+
+All stages here are **docs-only** — Tier 1, 3, 4 mostly skipped with justification (the surface is the recorded video file, not code; correctness is verified by file existence + duration + human review).
 
 ### T9.1 — Record + edit + upload
 
@@ -3437,7 +3728,7 @@ echo "OK 3 normal rehearsals + 1 chaos drill = 4 passes"
 
 **Description:** Use OBS or QuickTime, 1080p screen capture. Follow the 3-minute script in raw_prompt verbatim. Save as `demo/take1-screen.mp4`. **docs-only stage.**
 
-**Requires:** T8.1.8
+**Requires:** T8.1.10
 
 **Verify:**
 
@@ -3553,11 +3844,25 @@ echo "skipped — docs-only stage; the surface is GitHub repo metadata, exercise
 gh repo view --json visibility --jq '.visibility' | grep -q 'PUBLIC'
 ```
 
-#### T10.1.2 — README.md with WDK story + screenshot
+#### T10.1.2 — README.md (paper-deliverable: 800–1200 words, embedded video, hero screenshot, WDK story)
 
-**Description:** Write `README.md` opening with the WDK story (≥500 words). Add a `docs/` folder with the war-room CRITICAL state screenshot from T8.1.8. Embed the screenshot in the README. Include: project name, problem statement, how it works, durable workflow architecture diagram (ASCII), demo video URL, deploy URL.
+**Description:** Since live demos may not happen (judges may select winners from submissions alone), README.md is the **primary paper deliverable** alongside the deployed URL. Targets:
 
-**Requires:** T10.1.1
+- **800–1,200 words.** Long enough to tell the durability story, short enough that a judge with 6 projects to review reads to the end.
+- **Hero screenshot** at the top — `docs/screenshot-critical.png` (war room in CRITICAL state, captured during T8.1.10 rehearsal).
+- **One-paragraph elevator pitch** below the hero.
+- **"Why this matters"** — frame the problem (every team has a Slack channel where deploys go to die). Cite the cost of missing a bad deploy.
+- **"How it works"** — 4-section walkthrough: webhook → signal extraction → parallel agent fan-out → synthesizer + Slack pause/resume. Each section ≤120 words.
+- **Architecture diagram** — ASCII version of the T8.1.6 ARCH SVG, embedded in a code fence.
+- **WDK story** — explicit section: why durable workflows matter, what `"use workflow"` and `DurableAgent` do, what the chaos drill (T8.1.10) proves.
+- **Embedded demo video** — Markdown link with thumbnail to the YouTube video from T9.1.3. (`[![Watch the demo](docs/video-thumb.png)](https://youtu.be/...)`)
+- **"Try it yourself"** — link to the deployed URL with a one-line note "default mode is a 25-second simulation; click `[ LIVE ]` in the top bar for real-time monitoring".
+- **Reproducibility** — short `git clone && npm install && npm run dev` block, env vars list.
+- **Credits** — Vercel WDK / AI Gateway / Slack / Vercel KV named.
+
+The verify blocks below enforce 800-word floor, presence of the embedded video link, and the hero screenshot file.
+
+**Requires:** T10.1.1, T9.1.3 (need video URL), T8.1.10 (need screenshot)
 
 **Verify:**
 
@@ -3573,17 +3878,31 @@ echo "Dispatch code-simplifier:code-simplifier on: README.md"
 
 ```bash
 # tier3_unit
-node -e "const r = require('fs').readFileSync('README.md','utf8'); const words = r.split(/\\s+/).filter(Boolean).length; if (words < 500) { console.error('README too short: ' + words + ' words'); process.exit(1); } if (!/!\\[.*\\]\\(.*\\)/.test(r)) { console.error('no embedded image in README'); process.exit(1); } if (!/WDK|Workflow Development Kit/i.test(r)) { console.error('no WDK mention'); process.exit(1); } console.log('OK words=' + words)"
+node -e "
+const r = require('fs').readFileSync('README.md','utf8');
+const words = r.split(/\\s+/).filter(Boolean).length;
+if (words < 800 || words > 1500) { console.error('README out of band [800, 1500] words: ' + words); process.exit(1); }
+const hero = (r.match(/!\\[[^\\]]*\\]\\(docs\\/screenshot-critical\\.png\\)/) || []).length;
+if (hero < 1) { console.error('hero screenshot embed missing'); process.exit(1); }
+const video = (r.match(/!\\[[^\\]]*\\]\\([^)]+\\)\\]\\((https?:\\/\\/[^)]+(youtu\\.be|youtube|loom)[^)]+)\\)/i) || r.match(/(https?:\\/\\/[^)\\s]+(youtu\\.be|youtube|loom)[^)\\s]+)/i) || []).length;
+if (video < 1) { console.error('demo video link missing'); process.exit(1); }
+if (!/WDK|Workflow Development Kit|durable/i.test(r)) { console.error('no WDK / durability mention'); process.exit(1); }
+if (!/architecture|how it works/i.test(r)) { console.error('no architecture / how-it-works section'); process.exit(1); }
+if (!/git clone|npm install|npm run/i.test(r)) { console.error('no reproducibility steps'); process.exit(1); }
+console.log('OK words=' + words);
+"
 ```
 
 ```bash
 # tier4_integration
-test -f docs/screenshot-critical.png && file docs/screenshot-critical.png | grep -q 'PNG image'
+test -f docs/screenshot-critical.png && file docs/screenshot-critical.png | grep -q 'PNG image' && \
+  WIDTH=$(file docs/screenshot-critical.png | grep -oE '[0-9]+ x [0-9]+' | awk '{print $1}') && \
+  [ "${WIDTH:-0}" -ge 1280 ] && echo "OK hero screenshot exists at ${WIDTH}px wide"
 ```
 
-#### T10.1.3 — Submit hackathon entry
+#### T10.1.3 — Submit to Notion form (local pool — mandatory)
 
-**Description:** Fill out the hackathon submission form. Capture confirmation into `.submission-confirmation` (gitignored — may contain personal data). Track = WDK. Include: project name, GitHub URL, deploy URL, video URL, team members. **docs-only stage.**
+**Description:** Fill out the Notion submission form for the local hackathon pool (the form Oscar shared in the Notion doc). This is the only mandatory submission — the global Vercel pool is skipped because it requires v0 scaffolding which we did not use. Capture confirmation into `.submission-confirmation` (gitignored — may contain personal data). Include: project name (`Bridge`), GitHub URL, deploy URL, video URL (T9.1.3), team members, track = WDK. **docs-only stage.**
 
 **Requires:** T10.1.2
 

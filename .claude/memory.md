@@ -13,7 +13,21 @@
 - [2026-05-01] Claude design URL `https://api.anthropic.com/v1/design/h/Ry1KGi5XlJWoDA1GfmhpHw` is gated (POST-only API endpoint + Cloudflare auth on claude.ai mirror). Cannot be fetched by tools. The `war-room/` folder bundle is the local mirror and the implementation source of truth. URL embedded in spec for human reviewers (judges/teammates).
 - [2026-05-01] Verify-block rigor bar (§"Rigor bar" in spec) is mandatory for every behavior-bearing stage: tier3 ≥ 5 cases (happy + negative + ≥3 edge + ≥1 adversarial + config), tier4 must do at least one of (cross-stage integration / real external dep / E2E against running stack / failure-mode / idempotence). Tier4 may NOT duplicate tier3 with extra cases. **T2.2.1 is the canonical exemplar.** Other behavior stages must match that bar at implementation time.
 - [2026-05-01] Cinematic moments specced in T8.1.5–7: WORKFLOW SUSPENDED overlay + resume green pulse + PAGE pulse during the Slack pause; animated risk-score arc + smooth token tick on agent cards; live budget tick-down + state-flip flashes + investigator scan-line shimmer. Reason: the durability moment must be legible without narration — visuals do the work.
-- [2026-05-01] T8.1.8 includes a chaos drill (kill `next dev` mid-investigation, restart, verify workflow resumes from KV). This is the actual proof of the WDK durability claim. The chaos drill must succeed in rehearsal — it's the spec's real test for "the WDK pitch is true".
+- [2026-05-01] T8.1.10 (was T8.1.8 before judge-mode-UX renumber) includes a chaos drill (kill `next dev` mid-investigation, restart, verify workflow resumes from KV). This is the actual proof of the WDK durability claim. The chaos drill must succeed in rehearsal — it's the spec's real test for "the WDK pitch is true".
+
+- [2026-05-02] **Demo mode is now the production default**, not opt-in. raw_prompt assumed live demo as the primary surface; the hackathon submission flow may pick winners from submissions alone (no live demos) per the team chat. Result: deployed URL must sell the project on first paint. Default `mode='demo'` in T3.1.2; new T0.3.4 adds an autoplay loop with countdown chip; new T8.1.5 adds a DEMO/LIVE toggle in the TopBar with localStorage + URL-param persistence; new T8.1.6 adds a first-paint legend, ARCH diagram modal, and VIDEO/GITHUB chips.
+
+- [2026-05-02] **README.md is the secondary primary surface** (after the deployed URL). Bumped T10.1.2 from ≥500 words to 800–1200 words with hero screenshot, embedded video link, ASCII architecture diagram, WDK story up top, reproducibility steps. Verify block enforces all of these.
+
+- [2026-05-02] **T9 (video) reframed from "insurance" to "primary deliverable"** and runs in parallel with T8 polish. MVP cut after T5 (Slack pause) works; final cut after T8.1.10 rehearsals.
+
+- [2026-05-02] **T10.1.3 is Notion form only** — Vercel global pool dropped because it requires v0 (we use `create-next-app`, not v0). Per team chat: "if you don't use v0 i'm not fussed but Vercel might not accept the submission into their global pool".
+
+- [2026-05-02] **Honest sim-suffix** in DEMO mode: data rows (deploy entries, agent findings, threats) get a small `· sim` superscript so a judge can't accidentally confuse simulation data with real activity. Hidden in LIVE mode. Prevents the credibility hit of "wait, was that all fake?".
+
+- [2026-05-02] **Renumbered T8.1.5–8 → T8.1.7–10** to slot in the new mode-toggle (T8.1.5) and legend+ARCH+nav (T8.1.6) before the cinematic stages. T9.1.1 Requires updated to T8.1.10. T5.1.4 / T5.1.7 / T10.1.2 prose references updated.
+
+- [2026-05-02] **Stage count: 83** (was 80 before this iteration). T0=13 · T1=5 · T2=18 · T3=3 · T4=8 · T5=7 · T6=9 · T7=3 · T8=10 · T9=3 · T10=4.
 
 ## Patterns
 
