@@ -67,6 +67,9 @@ export type Verdict = {
   action: string;
   deploy_id_short?: string;
   suggested_action?: string;
+  acknowledged?: boolean;
+  acknowledged_by?: string;
+  action_taken?: string;
 };
 
 export type StatusState = 'all_clear' | 'monitoring' | 'anomaly' | 'critical';

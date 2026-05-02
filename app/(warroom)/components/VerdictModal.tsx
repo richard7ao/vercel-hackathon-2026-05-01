@@ -5,17 +5,31 @@ import type { Verdict } from "../data";
 export function VerdictModal({
   verdict,
   onClose,
+  onPage,
 }: {
   verdict: Verdict | null;
   onClose: () => void;
+  onPage?: () => void;
 }) {
   if (!verdict) return null;
+
+  const acked = verdict.acknowledged === true;
+
   return (
     <div className="verdict">
       <div className="verdict-head">
         <span>
           SYNTHESIZER VERDICT // dep_{verdict.deploy_id_short}
         </span>
+        {acked ? (
+          <span className="verdict-badge verdict-badge-acked">
+            [ ACKNOWLEDGED &middot; {verdict.acknowledged_by} ]
+          </span>
+        ) : (
+          <span className="verdict-badge verdict-badge-awaiting">
+            [ AWAITING ACK &middot; paused ]
+          </span>
+        )}
         <button className="x" onClick={onClose}>
           [ X ]
         </button>
@@ -39,17 +53,19 @@ export function VerdictModal({
           {verdict.suggested_action}
         </div>
 
-        <div className="verdict-actions-row">
-          <button className="btn" onClick={onClose}>
-            ACKNOWLEDGE
-          </button>
-          <button className="btn primary" onClick={onClose}>
-            HOLD ROLLBACK
-          </button>
-          <button className="btn danger" onClick={onClose}>
-            PAGE @oncall
-          </button>
-        </div>
+        {!acked && (
+          <div className="verdict-actions-row">
+            <button className="btn" onClick={onClose}>
+              ACKNOWLEDGE
+            </button>
+            <button className="btn primary" onClick={onClose}>
+              HOLD ROLLBACK
+            </button>
+            <button className="btn danger" onClick={onPage ?? onClose}>
+              PAGE @oncall
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

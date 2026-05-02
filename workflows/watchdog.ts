@@ -70,6 +70,41 @@ export function computeTimeoutAt(now: Date): string {
   return new Date(now.getTime() + maxSeconds * 1000).toISOString();
 }
 
+const HOLD_DURATION_MINUTES = parseInt(
+  process.env.HOLD_DURATION_MINUTES ?? "30",
+  10
+);
+
+export function applyAck(
+  verdictRec: Record<string, unknown>,
+  ack: { action_type: string; user: { id: string; username: string } }
+): Record<string, unknown> {
+  if (verdictRec.acknowledged_at) return verdictRec;
+
+  const now = new Date().toISOString();
+  const base = {
+    ...verdictRec,
+    acknowledged_at: now,
+    acknowledged_by: ack.user.username,
+    action_taken: ack.action_type,
+  };
+
+  if (ack.action_type === "hold") {
+    return {
+      ...base,
+      held_until: new Date(
+        Date.now() + HOLD_DURATION_MINUTES * 60 * 1000
+      ).toISOString(),
+    };
+  }
+
+  if (ack.action_type === "page") {
+    return { ...base, paged_at: now };
+  }
+
+  return base;
+}
+
 async function waitForSignal(
   signalName: string,
   timeoutAt: string
@@ -176,7 +211,19 @@ async function synthesizeAndPage(
     timeout_at: timeoutAt,
   });
 
-  return waitForSignal(signalName, timeoutAt);
+  const ackPayload = await waitForSignal(signalName, timeoutAt);
+
+  // Post-resume: apply ack to verdict record in KV
+  const existingVerdict =
+    (await kv.get<Record<string, unknown>>(`verdicts:${sha}`)) ?? {};
+  const updated = applyAck(existingVerdict, {
+    action_type: ackPayload.action_type,
+    user: ackPayload.user,
+  });
+  await kv.set(`verdicts:${sha}`, updated);
+  await kv.del(`pause_state:${sha}`);
+
+  return ackPayload;
 }
 
 export async function watchdog(input: WatchdogInput): Promise<WatchdogResult> {
