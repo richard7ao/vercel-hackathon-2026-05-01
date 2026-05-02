@@ -9,6 +9,7 @@ import { FeedPanel } from "./components/FeedPanel";
 import { HeatmapPanel } from "./components/HeatmapPanel";
 import { ThreatPanel } from "./components/ThreatPanel";
 import { VerdictModal } from "./components/VerdictModal";
+import { CountdownChip } from "./components/CountdownChip";
 
 export default function WarRoom() {
   const demo = useDemo();
@@ -53,6 +54,10 @@ export default function WarRoom() {
           ↺ RESET
         </button>
       </div>
+
+      {demo.loopState === "holding" && (
+        <CountdownChip nextPlayInMs={demo.nextPlayInMs} />
+      )}
 
       <div className="scanlines" />
       <div className="vignette" />

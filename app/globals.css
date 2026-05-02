@@ -814,3 +814,19 @@ html, body {
 
 .path { color: var(--amber); font-weight: 500; }
 .hide { display: none !important; }
+
+/* Countdown chip */
+.countdown-chip {
+  position: fixed;
+  bottom: 18px;
+  left: 18px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--amber);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  padding: 6px 14px;
+  z-index: 90;
+  animation: snap-in 0.2s ease-out;
+}

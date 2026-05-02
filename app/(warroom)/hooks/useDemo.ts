@@ -2,22 +2,63 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
+  type AgentFinding,
+  type AgentState,
   type Deploy,
   type FeedEntry,
-  type AgentState,
+  type StatusState,
   type Threat,
   type Verdict,
-  type StatusState,
-  AGENT_DEFS,
   INITIAL_DEPLOYS,
+  INITIAL_FEED,
   INITIAL_HEATMAP,
   INITIAL_THREATS,
-  INITIAL_FEED,
   initAgents,
   nowTs,
 } from "../data";
 
-export function useDemo() {
+type LoopPhase = "playing" | "holding" | "paused-by-user";
+
+const LOOP_HOLD_MS = 8000;
+const PAUSE_RESUME_MS = 30000;
+
+const AGENT_TOOLS: Record<string, string> = {
+  trace: "otlp.query",
+  runtime: "metrics.q",
+  history: "git.log",
+  dependency: "sbom.diff",
+  diff: "ast.walk",
+};
+
+export function computeLoopState(input: {
+  phase: string;
+  mode: string;
+  sinceMs: number;
+}): string {
+  const { phase, mode, sinceMs } = input;
+  if (phase === "initial") {
+    return sinceMs >= 3000 ? "playing" : "playing-pending";
+  }
+  if (mode === "live") return phase;
+  if (phase === "holding") {
+    return sinceMs >= LOOP_HOLD_MS ? "playing" : "holding";
+  }
+  if (phase === "paused-by-user") {
+    return sinceMs >= PAUSE_RESUME_MS ? "playing" : "paused-by-user";
+  }
+  return phase;
+}
+
+export function computeNextPlayInMs(input: {
+  sinceMs: number;
+  holdMs: number;
+  mode?: string;
+}): number | null {
+  if (input.mode === "live") return null;
+  return Math.max(0, input.holdMs - input.sinceMs);
+}
+
+export function useDemo(mode: "demo" | "live" = "demo") {
   const [state, setState] = useState<StatusState>("all_clear");
   const [uptime, setUptime] = useState(12 * 86400 + 4 * 3600 + 11 * 60);
   const [deploysAnalyzed, setDeploysAnalyzed] = useState(47);
@@ -41,15 +82,38 @@ export function useDemo() {
   const [running, setRunning] = useState(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
+  const [loopState, setLoopState_] = useState<LoopPhase>("playing");
+  const [nextPlayInMs, setNextPlayInMs] = useState(0);
+  const loopStateRef = useRef<LoopPhase>("playing");
+  const holdStartRef = useRef(0);
+  const loopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const replayFlagRef = useRef(false);
+
+  const setLoopState = useCallback((s: LoopPhase) => {
+    loopStateRef.current = s;
+    setLoopState_(s);
+  }, []);
+
   const at = useCallback((sec: number, fn: () => void) => {
     const id = setTimeout(fn, sec * 1000);
     timeoutsRef.current.push(id);
   }, []);
 
-  const clearAll = () => {
+  const clearAll = useCallback(() => {
     timeoutsRef.current.forEach(clearTimeout);
     timeoutsRef.current = [];
-  };
+  }, []);
+
+  const clearLoopTimers = useCallback(() => {
+    if (loopTimerRef.current) clearTimeout(loopTimerRef.current);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
+    loopTimerRef.current = null;
+    countdownRef.current = null;
+    pauseTimerRef.current = null;
+  }, []);
 
   useEffect(() => {
     const i = setInterval(() => setUptime((u) => u + 1), 1000);
@@ -92,17 +156,19 @@ export function useDemo() {
   }, []);
 
   const finalizeAgent = useCallback(
-    (
-      key: string,
-      finding: { severity: AgentState["finding"] extends { severity: infer S } ? S : string; summary: string },
-      latency: string
-    ) => {
+    (key: string, finding: AgentFinding, latency: string) => {
       setAgents((prev) => {
         const a = prev[key];
         const lines = (a.lines || []).map((l) => ({ ...l, cur: false }));
         return {
           ...prev,
-          [key]: { ...a, status: "complete" as const, lines, finding: finding as AgentState["finding"], latency },
+          [key]: {
+            ...a,
+            status: "complete",
+            lines,
+            finding,
+            latency,
+          },
         };
       });
     },
@@ -113,7 +179,7 @@ export function useDemo() {
     setFeed((prev) => [...prev, { ts: nowTs(), ...entry } as FeedEntry]);
   }, []);
 
-  const reset = useCallback(() => {
+  const resetDemoState = useCallback(() => {
     clearAll();
     setRunning(false);
     setState("all_clear");
@@ -127,13 +193,35 @@ export function useDemo() {
     setThreats(INITIAL_THREATS);
     setVerdict(null);
     setMtta("1.2s");
-  }, []);
+  }, [clearAll]);
+
+  const reset = useCallback(() => {
+    const wasHolding =
+      loopStateRef.current === "holding" ||
+      loopStateRef.current === "paused-by-user";
+    clearLoopTimers();
+    resetDemoState();
+    if (mode === "demo" && wasHolding) {
+      setLoopState("paused-by-user");
+      setNextPlayInMs(0);
+      pauseTimerRef.current = setTimeout(() => {
+        replayFlagRef.current = true;
+        resetDemoState();
+        setLoopState("playing");
+      }, PAUSE_RESUME_MS);
+    }
+  }, [resetDemoState, clearLoopTimers, mode, setLoopState]);
+
+  const runDemoRef = useRef<() => void>(() => {});
 
   const runDemo = useCallback(() => {
     if (running) return;
     clearAll();
+    clearLoopTimers();
     setRunning(true);
     setVerdict(null);
+    setLoopState("playing");
+    setNextPlayInMs(0);
 
     const newDeploy: Deploy = {
       id: "dep_048",
@@ -187,13 +275,9 @@ export function useDemo() {
 
     at(4, () => {
       setDeploys((prev) =>
-        prev.map((d) =>
-          d.id === "dep_048" ? { ...d, score: 0.91 } : d
-        )
+        prev.map((d) => (d.id === "dep_048" ? { ...d, score: 0.91 } : d))
       );
-      setActiveDeploy((prev) =>
-        prev ? { ...prev, score: 0.91 } : prev
-      );
+      setActiveDeploy((prev) => (prev ? { ...prev, score: 0.91 } : prev));
       setState("critical");
       pushFeed({
         severity: "critical",
@@ -209,7 +293,13 @@ export function useDemo() {
       at(5 + i * 0.15, () => {
         setAgent(k, {
           status: "dispatched",
-          lines: [{ ts: nowTs(), text: "dispatch ack · waking workflow…", cur: false }],
+          lines: [
+            {
+              ts: nowTs(),
+              text: "dispatch ack · waking workflow…",
+              cur: false,
+            },
+          ],
         });
       });
     });
@@ -226,14 +316,8 @@ export function useDemo() {
       at(6 + i * 0.12, () => {
         setAgent(k, (prev) => ({
           ...prev,
-          status: "investigating" as const,
-          tool: ({
-            trace: "otlp.query",
-            runtime: "metrics.q",
-            history: "git.log",
-            dependency: "sbom.diff",
-            diff: "ast.walk",
-          } as Record<string, string>)[k],
+          status: "investigating",
+          tool: AGENT_TOOLS[k],
         }));
       });
     });
@@ -267,9 +351,7 @@ export function useDemo() {
     };
     Object.entries(streams).forEach(([k, lines]) => {
       lines.forEach((text, i) => {
-        at(7 + i * 1.5 + Math.random() * 0.3, () =>
-          pushAgentLine(k, text)
-        );
+        at(7 + i * 1.5 + Math.random() * 0.3, () => pushAgentLine(k, text));
       });
     });
 
@@ -344,8 +426,7 @@ export function useDemo() {
         "runtime",
         {
           severity: "medium",
-          summary:
-            "No runtime anomalies yet. Window: last 4 minutes.",
+          summary: "No runtime anomalies yet. Window: last 4 minutes.",
         },
         "7.0s"
       );
@@ -382,19 +463,19 @@ export function useDemo() {
       setThreats((prev) => [
         {
           id: "th_NEW",
-          severity: "critical" as const,
+          severity: "critical",
           description:
             "Unauthorized `fetch()` to external host injected in auth path",
           age_seconds: 0,
-          status: "open" as const,
+          status: "open",
         },
         {
           id: "th_002",
-          severity: "high" as const,
+          severity: "high",
           description:
             "Author novelty // `dev-3` modifying CODEOWNERS-protected path without review",
           age_seconds: 60,
-          status: "open" as const,
+          status: "open",
         },
         ...prev,
       ]);
@@ -420,8 +501,7 @@ export function useDemo() {
         severity: "info",
         kind: "msg",
         author: "sec-oncall",
-        message:
-          "ack, on it. holding rollout at 0%. opening incident.",
+        message: "ack, on it. holding rollout at 0%. opening incident.",
       });
     });
     at(23, () => {
@@ -440,8 +520,51 @@ export function useDemo() {
         message: "demo hold · final state · press RESET to re-arm",
       });
       setRunning(false);
+
+      if (mode === "demo") {
+        setLoopState("holding");
+        holdStartRef.current = Date.now();
+        setNextPlayInMs(LOOP_HOLD_MS);
+
+        countdownRef.current = setInterval(() => {
+          const elapsed = Date.now() - holdStartRef.current;
+          setNextPlayInMs(Math.max(0, LOOP_HOLD_MS - elapsed));
+        }, 200);
+
+        loopTimerRef.current = setTimeout(() => {
+          clearLoopTimers();
+          setNextPlayInMs(0);
+          replayFlagRef.current = true;
+          resetDemoState();
+          setLoopState("playing");
+        }, LOOP_HOLD_MS);
+      }
     });
-  }, [running, at, pushAgentLine, finalizeAgent, pushFeed, setAgent]);
+  }, [
+    running,
+    at,
+    clearAll,
+    pushAgentLine,
+    finalizeAgent,
+    pushFeed,
+    setAgent,
+    clearLoopTimers,
+    mode,
+    setLoopState,
+    resetDemoState,
+  ]);
+
+  useEffect(() => {
+    runDemoRef.current = runDemo;
+  }, [runDemo]);
+
+  useEffect(() => {
+    if (replayFlagRef.current && !running && loopState === "playing") {
+      replayFlagRef.current = false;
+      const id = setTimeout(() => runDemoRef.current(), 50);
+      return () => clearTimeout(id);
+    }
+  }, [running, loopState]);
 
   const auto = useRef(false);
   useEffect(() => {
@@ -452,7 +575,13 @@ export function useDemo() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => () => clearAll(), []);
+  useEffect(
+    () => () => {
+      clearAll();
+      clearLoopTimers();
+    },
+    [clearLoopTimers]
+  );
 
   return {
     state,
@@ -473,5 +602,7 @@ export function useDemo() {
     runDemo,
     reset,
     running,
+    loopState,
+    nextPlayInMs,
   };
 }
