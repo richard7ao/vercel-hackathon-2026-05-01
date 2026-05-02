@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
+import { kv } from "@/lib/db";
 
 function verifySignature(body: string, signature: string | null): boolean {
   const secret = process.env.GITHUB_WEBHOOK_SECRET;
@@ -39,8 +40,11 @@ export async function POST(req: Request) {
   const payload = JSON.parse(body) as { after?: string };
   const sha = payload.after ?? "unknown";
 
-  // KV write deferred to T1.2.1 (lib/db.ts)
-  console.log(`[webhook] push received: sha=${sha}`);
+  try {
+    await kv.set(`deploys:raw:${sha}`, JSON.parse(body));
+  } catch (err) {
+    console.error("[webhook] KV write failed:", err);
+  }
 
   return NextResponse.json({ ok: true, sha });
 }
