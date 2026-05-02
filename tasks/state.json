@@ -3,7 +3,7 @@
   "last_updated": "2026-05-02T01:38:28.734Z",
   "current_task": "T5",
   "current_step": "T5.1",
-  "current_stage": "T5.1.1",
+  "current_stage": "T5.1.6",
   "tasks": {
     "T0": {
       "status": "complete",
@@ -335,8 +335,9 @@
               "note": "app/api/discord/interactions/route.ts — interaction webhook"
             },
             "T5.1.5": {
-              "status": "pending",
-              "completed_at": null
+              "status": "complete",
+              "completed_at": "2026-05-02T09:10:00.000Z",
+              "note": "WDK signal/wait pause — KV-based polling, durable across restart"
             },
             "T5.1.6": {
               "status": "pending",
