@@ -1,0 +1,799 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]: BRIDGE//PRODUCTION WAR ROOM
+        - generic "Monitored GitHub repo (MONITORED_REPO / NEXT_PUBLIC_MONITORED_REPO)" [ref=e6]: REPO richard7ao/meridian-core-banking
+        - generic "GitHub URL — webhook push events from this repository" [ref=e7]:
+          - text: GH
+          - link "richard7ao/meridian-core-banking" [ref=e9] [cursor=pointer]:
+            - /url: https://github.com/richard7ao/meridian-core-banking
+        - generic [ref=e10]: BRANCH main
+        - generic [ref=e11]: REGION iad1 · sfo1 · fra1
+      - generic [ref=e12]:
+        - generic [ref=e13]: FOCUS — no active investigation —
+        - button "[ LIVE · connected ]" [ref=e14] [cursor=pointer]: "[ LIVE · connected ]"
+        - generic [ref=e16]: 2026-05-02 15:45:18 UTC
+    - generic [ref=e17]:
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - generic [ref=e24]: OPS://
+          - generic [ref=e25]: DEPLOY-MONITOR
+        - generic [ref=e26]:
+          - generic [ref=e27]: CHANNEL
+          - generic [ref=e28]: "#deploys · discord"
+        - generic [ref=e29]:
+          - generic [ref=e30]: SYNTH
+          - generic [ref=e31]: claude-sonnet-4 · v0.7.2
+        - generic [ref=e32]:
+          - generic [ref=e33]: AGENTS
+          - generic [ref=e34]: 5 STANDING
+      - generic [ref=e36]:
+        - generic [ref=e37]:
+          - img [ref=e38]
+          - generic [ref=e41]: "0.00"
+        - generic [ref=e42]:
+          - generic [ref=e43]:
+            - generic [ref=e44]: "["
+            - generic [ref=e45]: MONITORING
+            - generic [ref=e46]: "]"
+          - generic [ref=e47]:
+            - generic [ref=e48]: monitoring
+            - generic [ref=e49]: ·
+            - generic [ref=e50]: 93 deploys analyzed
+            - generic [ref=e51]: ·
+            - generic [ref=e52]: 15h 44m since last incident
+      - generic [ref=e53]:
+        - generic [ref=e54]:
+          - generic [ref=e55]: RISK BIAS
+          - generic [ref=e56]: P50 0.11 · P95 0.42
+        - generic [ref=e57]:
+          - generic [ref=e58]: MTTA
+          - generic [ref=e59]: —
+        - generic [ref=e60]:
+          - generic [ref=e61]: SSE
+          - generic [ref=e62]: connected · 4ms
+        - generic [ref=e63]:
+          - generic [ref=e64]: BUDGET
+          - generic [ref=e65]: 100% remaining
+    - generic [ref=e66]:
+      - generic [ref=e67]:
+        - generic [ref=e68]: DEPLOY TIMELINE // LAST 30D
+        - generic [ref=e69]: N=93 · P50 0.11
+      - img [ref=e256]:
+        - generic [ref=e258]: APR 02
+        - generic [ref=e260]: APR 10
+        - generic [ref=e262]: APR 18
+        - generic [ref=e264]: APR 25
+        - generic [ref=e266]: MAY 01
+      - generic [ref=e71]:
+        - generic [ref=e72]: NOW
+        - generic [ref=e74]: 15:44Z
+        - generic [ref=e75]: +0.4d HORIZON
+    - generic [ref=e76]:
+      - generic [ref=e77]:
+        - generic [ref=e78]:
+          - generic [ref=e79]:
+            - generic [ref=e80]: "[04]"
+            - text: INVESTIGATOR AGENTS
+            - generic [ref=e81]: // PARALLEL FAN-OUT
+          - generic [ref=e82]:
+            - generic [ref=e83]: ACTIVE 0/5
+            - generic [ref=e84]: DONE 3/5
+        - generic [ref=e86]:
+          - generic [ref=e87]:
+            - generic [ref=e88]:
+              - generic [ref=e89]:
+                - generic [ref=e90]: "01"
+                - text: TRACE
+                - generic [ref=e91]: / INSPECTOR AGENT · OTLP
+              - generic [ref=e92]: "[ IDLE ]"
+            - generic [ref=e94]:
+              - generic [ref=e95]: STEPS 0
+              - generic [ref=e96]: TOK 0
+              - generic [ref=e97]: LAT —
+            - generic [ref=e99]:
+              - generic [ref=e100]: "--:--:--"
+              - generic [ref=e101]: standing by
+          - generic [ref=e102]:
+            - generic [ref=e103]:
+              - generic [ref=e104]:
+                - generic [ref=e105]: "02"
+                - text: RUNTIME
+                - generic [ref=e106]: / INSPECTOR AGENT · METRICS
+              - generic [ref=e107]: "[ IDLE ]"
+            - generic [ref=e109]:
+              - generic [ref=e110]: STEPS 0
+              - generic [ref=e111]: TOK 0
+              - generic [ref=e112]: LAT —
+            - generic [ref=e114]:
+              - generic [ref=e115]: "--:--:--"
+              - generic [ref=e116]: standing by
+          - generic [ref=e117]:
+            - generic [ref=e118]:
+              - generic [ref=e119]:
+                - generic [ref=e120]: "03"
+                - text: HISTORY
+                - generic [ref=e121]: / INSPECTOR AGENT · GIT
+              - generic [ref=e122]: "[ COMPLETE ]"
+            - generic [ref=e124]:
+              - generic [ref=e125]: STEPS 1
+              - generic [ref=e126]: TOK 0
+              - generic [ref=e127]: LAT —
+            - generic [ref=e945]: "Based on my investigation: **Analysis:** 1. **Author History**: The lookup for author \"unknown\" returned an empty history, confirming what was found in the past investigation from 2026-05-02. 2. **Known Patterns**: With no commit history in the system, there are no known directories, repositories, or temporal patterns established for this author. 3. **Current Activity**: The author has no files listed in this commit, and there's no baseline to compare against for unusual activity. 4. **Cont"
+          - generic [ref=e132]:
+            - generic [ref=e133]:
+              - generic [ref=e134]:
+                - generic [ref=e135]: "04"
+                - text: DEPENDENCY
+                - generic [ref=e136]: / INSPECTOR AGENT · GRAPH
+              - generic [ref=e137]: "[ COMPLETE ]"
+            - generic [ref=e139]:
+              - generic [ref=e140]: STEPS 1
+              - generic [ref=e141]: TOK 0
+              - generic [ref=e142]: LAT —
+            - generic [ref=e885]: No package.json changes detected.
+          - generic [ref=e147]:
+            - generic [ref=e148]:
+              - generic [ref=e149]:
+                - generic [ref=e150]: "05"
+                - text: DIFF
+                - generic [ref=e151]: / INSPECTOR AGENT · AST
+              - generic [ref=e152]: "[ COMPLETE ]"
+            - generic [ref=e154]:
+              - generic [ref=e155]: STEPS 1
+              - generic [ref=e156]: TOK 0
+              - generic [ref=e157]: LAT —
+            - generic [ref=e888]: No security patterns detected in the diff.
+      - generic [ref=e162]:
+        - generic [ref=e163]:
+          - generic [ref=e164]:
+            - generic [ref=e165]: "[05]"
+            - text: LIVE FEED
+            - generic [ref=e166]: "// #deploys"
+          - generic [ref=e169]: DISCORD · CONNECTED
+        - generic [ref=e171]:
+          - generic [ref=e447]:
+            - generic [ref=e448]: 2026-04-30T04:17:42.783Z
+            - generic [ref=e449]: ·
+            - generic [ref=e450]:
+              - generic [ref=e451]: SYS
+              - text: "Deploy bfaeca8 · k-lee: 1 file(s) in lib"
+          - generic [ref=e452]:
+            - generic [ref=e453]: 2026-04-23T02:37:42.783Z
+            - generic [ref=e454]: ·
+            - generic [ref=e455]:
+              - generic [ref=e456]: SYS
+              - text: "Deploy b699052 · t-okafor: 3 file(s) in lib"
+          - generic [ref=e457]:
+            - generic [ref=e458]: 2026-04-16T03:38:42.783Z
+            - generic [ref=e459]: ·
+            - generic [ref=e460]:
+              - generic [ref=e461]: SYS
+              - text: "Deploy a4f38ee · j-wright: 4 file(s) in lib"
+          - generic [ref=e462]:
+            - generic [ref=e463]: 2026-05-02T04:19:42.783Z
+            - generic [ref=e464]: ·
+            - generic [ref=e465]:
+              - generic [ref=e466]: SYS
+              - text: "Deploy 5dad77a · t-okafor: 2 file(s) in lib"
+          - generic [ref=e467]:
+            - generic [ref=e468]: 2026-04-11T05:08:42.783Z
+            - generic [ref=e469]: ·
+            - generic [ref=e470]:
+              - generic [ref=e471]: SYS
+              - text: "Deploy 6326a35 · dev-3: 2 file(s) in components"
+          - generic [ref=e472]:
+            - generic [ref=e473]: 2026-04-18T05:14:42.783Z
+            - generic [ref=e474]: ·
+            - generic [ref=e475]:
+              - generic [ref=e476]: SYS
+              - text: "Deploy db785d2 · t-okafor: 2 file(s) in lib"
+          - generic [ref=e477]:
+            - generic [ref=e478]: 2026-04-25T06:21:42.783Z
+            - generic [ref=e479]: ·
+            - generic [ref=e480]:
+              - generic [ref=e481]: SYS
+              - text: "Deploy fc071be · j-wright: 3 file(s) in lib"
+          - generic [ref=e482]:
+            - generic [ref=e483]: 2026-04-04T04:01:42.783Z
+            - generic [ref=e484]: ·
+            - generic [ref=e485]:
+              - generic [ref=e486]: SYS
+              - text: "Deploy 28a3740 · m-chen: 2 file(s) in lib"
+          - generic [ref=e487]:
+            - generic [ref=e488]: 2026-04-28T02:41:42.783Z
+            - generic [ref=e489]: ·
+            - generic [ref=e490]:
+              - generic [ref=e491]: SYS
+              - text: "Deploy 8cec499 · s-garcia: 1 file(s) in app"
+          - generic [ref=e492]:
+            - generic [ref=e493]: 2026-04-14T08:54:42.783Z
+            - generic [ref=e494]: ·
+            - generic [ref=e495]:
+              - generic [ref=e496]: SYS
+              - text: "Deploy 62d7bc8 · m-chen: 1 file(s) in lib"
+          - generic [ref=e497]:
+            - generic [ref=e498]: 2026-04-18T03:40:42.783Z
+            - generic [ref=e499]: ·
+            - generic [ref=e500]:
+              - generic [ref=e501]: SYS
+              - text: "Deploy 55ea5f8 · dev-3: 1 file(s) in components"
+          - generic [ref=e502]:
+            - generic [ref=e503]: 2026-05-01T01:09:42.783Z
+            - generic [ref=e504]: ·
+            - generic [ref=e505]:
+              - generic [ref=e506]: SYS
+              - text: "Deploy 768c4f3 · t-okafor: 3 file(s) in lib"
+          - generic [ref=e507]:
+            - generic [ref=e508]: 2026-04-12T00:26:42.783Z
+            - generic [ref=e509]: ·
+            - generic [ref=e510]:
+              - generic [ref=e511]: SYS
+              - text: "Deploy 3eb5043 · s-garcia: 1 file(s) in app"
+          - generic [ref=e512]:
+            - generic [ref=e513]: 2026-04-24T01:03:42.783Z
+            - generic [ref=e514]: ·
+            - generic [ref=e515]:
+              - generic [ref=e516]: SYS
+              - text: "Deploy 9e0ed8e · dev-3: 2 file(s) in components"
+          - generic [ref=e517]:
+            - generic [ref=e518]: 2026-04-27T05:49:42.783Z
+            - generic [ref=e519]: ·
+            - generic [ref=e520]:
+              - generic [ref=e521]: SYS
+              - text: "Deploy 3d6c011 · m-chen: 3 file(s) in lib"
+          - generic [ref=e522]:
+            - generic [ref=e523]: 2026-04-10T05:42:42.783Z
+            - generic [ref=e524]: ·
+            - generic [ref=e525]:
+              - generic [ref=e526]: SYS
+              - text: "Deploy a8c7962 · t-okafor: 1 file(s) in lib"
+          - generic [ref=e527]:
+            - generic [ref=e528]: 2026-04-17T07:22:42.783Z
+            - generic [ref=e529]: ·
+            - generic [ref=e530]:
+              - generic [ref=e531]: SYS
+              - text: "Deploy a75a8cb · k-lee: 3 file(s) in lib"
+          - generic [ref=e532]:
+            - generic [ref=e533]: 2026-04-15T04:12:42.783Z
+            - generic [ref=e534]: ·
+            - generic [ref=e535]:
+              - generic [ref=e536]: SYS
+              - text: "Deploy 56a3848 · k-lee: 1 file(s) in app"
+          - generic [ref=e537]:
+            - generic [ref=e538]: 2026-04-24T08:29:42.783Z
+            - generic [ref=e539]: ·
+            - generic [ref=e540]:
+              - generic [ref=e541]: SYS
+              - text: "Deploy aa639a9 · m-chen: 2 file(s) in lib"
+          - generic [ref=e542]:
+            - generic [ref=e543]: 2026-04-19T01:32:42.783Z
+            - generic [ref=e544]: ·
+            - generic [ref=e545]:
+              - generic [ref=e546]: SYS
+              - text: "Deploy c5d23ed · p-johnson: 3 file(s) in .github"
+          - generic [ref=e547]:
+            - generic [ref=e548]: 2026-04-10T06:16:42.783Z
+            - generic [ref=e549]: ·
+            - generic [ref=e550]:
+              - generic [ref=e551]: SYS
+              - text: "Deploy f8b571c · j-wright: 2 file(s) in lib"
+          - generic [ref=e552]:
+            - generic [ref=e553]: 2026-04-20T06:50:42.783Z
+            - generic [ref=e554]: ·
+            - generic [ref=e555]:
+              - generic [ref=e556]: SYS
+              - text: "Deploy b09aaa0 · a-kumar: 2 file(s) in app"
+          - generic [ref=e557]:
+            - generic [ref=e558]: 2026-05-01T00:35:42.783Z
+            - generic [ref=e559]: ·
+            - generic [ref=e560]:
+              - generic [ref=e561]: SYS
+              - text: "Deploy c6d0c64 · dev-3: 2 file(s) in components"
+          - generic [ref=e562]:
+            - generic [ref=e563]: 2026-04-25T03:13:42.783Z
+            - generic [ref=e564]: ·
+            - generic [ref=e565]:
+              - generic [ref=e566]: SYS
+              - text: "Deploy ff711a0 · a-kumar: 1 file(s) in app"
+          - generic [ref=e567]:
+            - generic [ref=e568]: 2026-04-14T03:02:42.783Z
+            - generic [ref=e569]: ·
+            - generic [ref=e570]:
+              - generic [ref=e571]: SYS
+              - text: "Deploy 1a8bdfa · t-okafor: 2 file(s) in lib"
+          - generic [ref=e572]:
+            - generic [ref=e573]: 2026-04-12T08:52:42.783Z
+            - generic [ref=e574]: ·
+            - generic [ref=e575]:
+              - generic [ref=e576]: SYS
+              - text: "Deploy 91ae841 · t-okafor: 4 file(s) in lib"
+          - generic [ref=e577]:
+            - generic [ref=e578]: 2026-04-25T04:47:42.783Z
+            - generic [ref=e579]: ·
+            - generic [ref=e580]:
+              - generic [ref=e581]: SYS
+              - text: "Deploy 0bc2a20 · t-okafor: 1 file(s) in lib"
+          - generic [ref=e582]:
+            - generic [ref=e583]: 2026-04-22T06:53:42.783Z
+            - generic [ref=e584]: ·
+            - generic [ref=e585]:
+              - generic [ref=e586]: SYS
+              - text: "Deploy d261506 · r-martinez: 1 file(s) in lib"
+          - generic [ref=e587]:
+            - generic [ref=e588]: 2026-04-09T02:31:42.783Z
+            - generic [ref=e589]: ·
+            - generic [ref=e590]:
+              - generic [ref=e591]: SYS
+              - text: "Deploy 88bfd7e · t-okafor: 2 file(s) in lib"
+          - generic [ref=e592]:
+            - generic [ref=e593]: 2026-04-26T08:31:42.783Z
+            - generic [ref=e594]: ·
+            - generic [ref=e595]:
+              - generic [ref=e596]: SYS
+              - text: "Deploy b038653 · s-garcia: 2 file(s) in lib"
+          - generic [ref=e597]:
+            - generic [ref=e598]: 2026-04-14T00:28:42.783Z
+            - generic [ref=e599]: ·
+            - generic [ref=e600]:
+              - generic [ref=e601]: SYS
+              - text: "Deploy 2cef6bb · a-kumar: 1 file(s) in app"
+          - generic [ref=e602]:
+            - generic [ref=e603]: 2026-04-29T00:33:42.783Z
+            - generic [ref=e604]: ·
+            - generic [ref=e605]:
+              - generic [ref=e606]: SYS
+              - text: "Deploy 3f450d1 · j-wright: 1 file(s) in lib"
+          - generic [ref=e607]:
+            - generic [ref=e608]: 2026-04-09T01:58:42.783Z
+            - generic [ref=e609]: ·
+            - generic [ref=e610]:
+              - generic [ref=e611]: SYS
+              - text: "Deploy 6537661 · dev-3: 1 file(s) in components"
+          - generic [ref=e612]:
+            - generic [ref=e613]: 2026-04-08T06:13:42.783Z
+            - generic [ref=e614]: ·
+            - generic [ref=e615]:
+              - generic [ref=e616]: SYS
+              - text: "Deploy cb9089e · s-garcia: 2 file(s) in app"
+          - generic [ref=e617]:
+            - generic [ref=e618]: 2026-04-27T07:57:42.783Z
+            - generic [ref=e619]: ·
+            - generic [ref=e620]:
+              - generic [ref=e621]: SYS
+              - text: "Deploy 868c997 · t-okafor: 1 file(s) in lib"
+          - generic [ref=e622]:
+            - generic [ref=e623]: 2026-04-19T00:58:42.783Z
+            - generic [ref=e624]: ·
+            - generic [ref=e625]:
+              - generic [ref=e626]: SYS
+              - text: "Deploy 53d358c · s-garcia: 1 file(s) in lib"
+          - generic [ref=e627]:
+            - generic [ref=e628]: 2026-04-17T06:48:42.783Z
+            - generic [ref=e629]: ·
+            - generic [ref=e630]:
+              - generic [ref=e631]: SYS
+              - text: "Deploy 9dba2fc · j-wright: 3 file(s) in lib"
+          - generic [ref=e632]:
+            - generic [ref=e633]: 2026-04-19T07:24:42.783Z
+            - generic [ref=e634]: ·
+            - generic [ref=e635]:
+              - generic [ref=e636]: SYS
+              - text: "Deploy a83f6ea · t-okafor: 4 file(s) in lib"
+          - generic [ref=e637]:
+            - generic [ref=e638]: 2026-04-21T01:00:42.783Z
+            - generic [ref=e639]: ·
+            - generic [ref=e640]:
+              - generic [ref=e641]: SYS
+              - text: "Deploy a4777ed · a-kumar: 2 file(s) in app"
+          - generic [ref=e642]:
+            - generic [ref=e643]: 2026-05-02T15:44:05.494Z
+            - generic [ref=e644]: ·
+            - generic [ref=e645]:
+              - generic [ref=e646]: SYS
+              - text: Deploy probe2_ · Demo rehearsal · forced score 0.90
+          - generic [ref=e647]:
+            - generic [ref=e648]: 2026-04-22T05:19:42.783Z
+            - generic [ref=e649]: ·
+            - generic [ref=e650]:
+              - generic [ref=e651]: SYS
+              - text: "Deploy 99d0f03 · s-garcia: 2 file(s) in lib"
+          - generic [ref=e652]:
+            - generic [ref=e653]: 2026-04-13T04:10:42.783Z
+            - generic [ref=e654]: ·
+            - generic [ref=e655]:
+              - generic [ref=e656]: SYS
+              - text: "Deploy e76a6bb · r-martinez: 1 file(s) in lib"
+          - generic [ref=e657]:
+            - generic [ref=e658]: 2026-04-27T06:23:42.783Z
+            - generic [ref=e659]: ·
+            - generic [ref=e660]:
+              - generic [ref=e661]: SYS
+              - text: "Deploy efbcace · a-kumar: 2 file(s) in app"
+          - generic [ref=e662]:
+            - generic [ref=e663]: 2026-04-21T01:34:42.783Z
+            - generic [ref=e664]: ·
+            - generic [ref=e665]:
+              - generic [ref=e666]: SYS
+              - text: "Deploy 435688e · t-okafor: 2 file(s) in lib"
+          - generic [ref=e667]:
+            - generic [ref=e668]: 2026-04-13T03:36:42.783Z
+            - generic [ref=e669]: ·
+            - generic [ref=e670]:
+              - generic [ref=e671]: SYS
+              - text: "Deploy 1d3b1fb · s-garcia: 3 file(s) in app"
+          - generic [ref=e672]:
+            - generic [ref=e673]: 2026-04-04T00:53:42.783Z
+            - generic [ref=e674]: ·
+            - generic [ref=e675]:
+              - generic [ref=e676]: SYS
+              - text: "Deploy f99861d · s-garcia: 4 file(s) in app"
+          - generic [ref=e677]:
+            - generic [ref=e678]: 2026-04-15T07:20:42.783Z
+            - generic [ref=e679]: ·
+            - generic [ref=e680]:
+              - generic [ref=e681]: SYS
+              - text: "Deploy 70a71b5 · r-martinez: 2 file(s) in lib"
+          - generic [ref=e682]:
+            - generic [ref=e683]: 2026-04-18T03:06:42.783Z
+            - generic [ref=e684]: ·
+            - generic [ref=e685]:
+              - generic [ref=e686]: SYS
+              - text: "Deploy 326f752 · m-chen: 2 file(s) in lib"
+          - generic [ref=e687]:
+            - generic [ref=e688]: 2026-05-02T05:53:42.783Z
+            - generic [ref=e689]: ·
+            - generic [ref=e690]:
+              - generic [ref=e691]: SYS
+              - text: "Deploy cd24b32 · j-wright: 3 file(s) in lib"
+          - generic [ref=e692]:
+            - generic [ref=e693]: 2026-04-06T02:29:42.783Z
+            - generic [ref=e694]: ·
+            - generic [ref=e695]:
+              - generic [ref=e696]: SYS
+              - text: "Deploy dd1d33e · t-okafor: 2 file(s) in lib"
+          - generic [ref=e697]:
+            - generic [ref=e698]: 2026-04-10T07:50:42.783Z
+            - generic [ref=e699]: ·
+            - generic [ref=e700]:
+              - generic [ref=e701]: SYS
+              - text: "Deploy 276e473 · k-lee: 3 file(s) in lib"
+          - generic [ref=e702]:
+            - generic [ref=e703]: 2026-04-05T07:45:42.783Z
+            - generic [ref=e704]: ·
+            - generic [ref=e705]:
+              - generic [ref=e706]: SYS
+              - text: "Deploy 649686a · a-kumar: 2 file(s) in app"
+          - generic [ref=e707]:
+            - generic [ref=e708]: 2026-04-07T08:21:42.783Z
+            - generic [ref=e709]: ·
+            - generic [ref=e710]:
+              - generic [ref=e711]: SYS
+              - text: "Deploy 14132df · m-chen: 3 file(s) in lib"
+          - generic [ref=e712]:
+            - generic [ref=e713]: 2026-04-16T03:04:42.783Z
+            - generic [ref=e714]: ·
+            - generic [ref=e715]:
+              - generic [ref=e716]: SYS
+              - text: "Deploy c518344 · t-okafor: 3 file(s) in lib"
+          - generic [ref=e717]:
+            - generic [ref=e718]: 2026-04-16T01:30:42.783Z
+            - generic [ref=e719]: ·
+            - generic [ref=e720]:
+              - generic [ref=e721]: SYS
+              - text: "Deploy e045c72 · dev-3: 2 file(s) in components"
+          - generic [ref=e722]:
+            - generic [ref=e723]: 2026-04-30T05:51:42.783Z
+            - generic [ref=e724]: ·
+            - generic [ref=e725]:
+              - generic [ref=e726]: SYS
+              - text: "Deploy 8828a06 · s-garcia: 3 file(s) in app"
+          - generic [ref=e727]:
+            - generic [ref=e728]: 2026-04-07T07:47:42.783Z
+            - generic [ref=e729]: ·
+            - generic [ref=e730]:
+              - generic [ref=e731]: SYS
+              - text: "Deploy b5c4d40 · r-martinez: 2 file(s) in lib"
+          - generic [ref=e732]:
+            - generic [ref=e733]: 2026-04-29T07:59:42.783Z
+            - generic [ref=e734]: ·
+            - generic [ref=e735]:
+              - generic [ref=e736]: SYS
+              - text: "Deploy 26944c4 · t-okafor: 2 file(s) in lib"
+          - generic [ref=e737]:
+            - generic [ref=e738]: 2026-04-23T03:11:42.783Z
+            - generic [ref=e739]: ·
+            - generic [ref=e740]:
+              - generic [ref=e741]: SYS
+              - text: "Deploy 972878c · j-wright: 1 file(s) in lib"
+          - generic [ref=e742]:
+            - generic [ref=e743]: 2026-05-01T09:01:42.783Z
+            - generic [ref=e744]: ·
+            - generic [ref=e745]:
+              - generic [ref=e746]: SYS
+              - text: "Deploy f07b87f · m-chen: 2 file(s) in lib"
+          - generic [ref=e747]:
+            - generic [ref=e748]: 2026-04-22T08:27:42.783Z
+            - generic [ref=e749]: ·
+            - generic [ref=e750]:
+              - generic [ref=e751]: SYS
+              - text: "Deploy fc7f4f1 · t-okafor: 1 file(s) in lib"
+          - generic [ref=e752]:
+            - generic [ref=e753]: 2026-04-28T03:15:42.783Z
+            - generic [ref=e754]: ·
+            - generic [ref=e755]:
+              - generic [ref=e756]: SYS
+              - text: "Deploy 35fd013 · r-martinez: 2 file(s) in lib"
+          - generic [ref=e757]:
+            - generic [ref=e758]: 2026-04-23T04:45:42.783Z
+            - generic [ref=e759]: ·
+            - generic [ref=e760]:
+              - generic [ref=e761]: SYS
+              - text: "Deploy e2d8618 · k-lee: 2 file(s) in app"
+          - generic [ref=e762]:
+            - generic [ref=e763]: 2026-04-05T08:19:42.783Z
+            - generic [ref=e764]: ·
+            - generic [ref=e765]:
+              - generic [ref=e766]: SYS
+              - text: "Deploy 3a1f566 · t-okafor: 1 file(s) in lib"
+          - generic [ref=e767]:
+            - generic [ref=e768]: 2026-04-06T04:03:42.783Z
+            - generic [ref=e769]: ·
+            - generic [ref=e770]:
+              - generic [ref=e771]: SYS
+              - text: "Deploy e005489 · s-garcia: 2 file(s) in app"
+          - generic [ref=e772]:
+            - generic [ref=e773]: 2026-04-05T06:11:42.783Z
+            - generic [ref=e774]: ·
+            - generic [ref=e775]:
+              - generic [ref=e776]: SYS
+              - text: "Deploy 9ad7d1d · m-chen: 1 file(s) in lib"
+          - generic [ref=e777]:
+            - generic [ref=e778]: 2026-04-07T01:55:42.783Z
+            - generic [ref=e779]: ·
+            - generic [ref=e780]:
+              - generic [ref=e781]: SYS
+              - text: "Deploy d0e3014 · a-kumar: 1 file(s) in app"
+          - generic [ref=e782]:
+            - generic [ref=e783]: 2026-05-02T15:44:40.751Z
+            - generic [ref=e784]: ▲
+            - generic [ref=e785]:
+              - generic [ref=e786]: SYS
+              - text: VERDICT · CRITICAL · An unknown author with no commit history has submitted changes without detectable security patterns, representing a sign
+          - generic [ref=e787]:
+            - generic [ref=e788]: 2026-05-02T15:44:40.830Z
+            - generic [ref=e789]: ▲
+            - generic [ref=e790]:
+              - generic [ref=e791]: SYS
+              - text: VERDICT · CRITICAL · An unknown author with no commit history is attempting to make changes, presenting a critical security risk despite beni
+          - generic [ref=e792]:
+            - generic [ref=e793]: 2026-05-02T15:44:40.904Z
+            - generic [ref=e794]: ·
+            - generic [ref=e795]:
+              - generic [ref=e796]: SYS
+              - text: DIFF · No security patterns detected in the diff.
+          - generic [ref=e797]:
+            - generic [ref=e798]: 2026-05-02T15:44:40.984Z
+            - generic [ref=e799]: ·
+            - generic [ref=e800]:
+              - generic [ref=e801]: SYS
+              - text: DEPENDENCY · No package.json changes detected.
+          - generic [ref=e802]:
+            - generic [ref=e803]: 2026-05-02T15:44:41.090Z
+            - generic [ref=e804]: ·
+            - generic [ref=e805]:
+              - generic [ref=e806]: SYS
+              - text: DEPENDENCY · No package.json changes detected.
+          - generic [ref=e807]:
+            - generic [ref=e808]: 2026-05-02T15:44:41.131Z
+            - generic [ref=e809]: ▲
+            - generic [ref=e810]:
+              - generic [ref=e811]: SYS
+              - text: "HISTORY · The lookup for author \"unknown\" returned no history. This is a significant finding - an author with no known commit history is attempting to make changes. Without specific files to check, I cannot verify the hour-of-day patterns. However, the key issue here is: 1. **Unknown Author**: The author is listed as \"unknown\" with no prior commit history 2. **No Directory History**: The lookup returned empty results, meaning this author has no established pattern of working in known directories 3. **No"
+          - generic [ref=e812]:
+            - generic [ref=e813]: 2026-05-02T15:44:41.208Z
+            - generic [ref=e814]: ·
+            - generic [ref=e815]:
+              - generic [ref=e816]: SYS
+              - text: "HISTORY · The author \"unknown\" has no commit history in the system, which means there are no known directories or patterns for this author. Additionally, I notice that no specific files were provided in the commit. Without files to analyze, I cannot check the hour-of-day edit frequency. **Analysis Summary:** - **Author**: \"unknown\" - No historical data available - **Files**: None provided - **Current UTC hour**: 15 (3 PM) **Findings:** 1. The author is completely unknown with zero prior commits - this"
+          - generic [ref=e817]:
+            - generic [ref=e818]: 2026-05-02T15:44:41.284Z
+            - generic [ref=e819]: ·
+            - generic [ref=e820]:
+              - generic [ref=e821]: SYS
+              - text: DIFF · No security patterns detected in the diff.
+          - generic [ref=e822]:
+            - generic [ref=e823]: 2026-05-02T15:44:44.217Z
+            - generic [ref=e824]: ·
+            - generic [ref=e825]:
+              - generic [ref=e826]: SYS
+              - text: Deploy reh_moo · Demo rehearsal · forced score 0.90
+          - generic [ref=e827]:
+            - generic [ref=e828]: 2026-05-02T15:44:53.875Z
+            - generic [ref=e829]: ·
+            - generic [ref=e830]:
+              - generic [ref=e831]: SYS
+              - text: DEPENDENCY · No package.json changes detected.
+          - generic [ref=e832]:
+            - generic [ref=e833]: 2026-05-02T15:44:54.103Z
+            - generic [ref=e834]: ·
+            - generic [ref=e835]:
+              - generic [ref=e836]: SYS
+              - text: DIFF · No security patterns detected in the diff.
+          - generic [ref=e837]:
+            - generic [ref=e838]: 2026-05-02T15:44:55.092Z
+            - generic [ref=e839]: ·
+            - generic [ref=e840]:
+              - generic [ref=e841]: SYS
+              - text: DIFF · No security patterns detected in the diff.
+          - generic [ref=e842]:
+            - generic [ref=e843]: 2026-05-02T15:44:57.942Z
+            - generic [ref=e844]: ·
+            - generic [ref=e845]:
+              - generic [ref=e846]: SYS
+              - text: "HISTORY · Based on my investigation: **Analysis:** 1. **Author History**: The lookup for author \"unknown\" returned an empty history, confirming what was found in the past investigation from 2026-05-02. 2. **Known Patterns**: With no commit history in the system, there are no known directories, repositories, or temporal patterns established for this author. 3. **Current Activity**: The author has no files listed in this commit, and there's no baseline to compare against for unusual activity. 4. **Cont"
+          - generic [ref=e847]:
+            - generic [ref=e848]: 2026-05-02T15:45:09.825Z
+            - generic [ref=e849]: ·
+            - generic [ref=e850]:
+              - generic [ref=e851]: SYS
+              - text: VERDICT · INVESTIGATE · An unknown author with no commit history is attempting to make changes, though current activity shows minimal file modif
+      - generic [ref=e172]:
+        - generic [ref=e174]:
+          - generic [ref=e175]: "[06]"
+          - text: SYSTEM-AREA HEATMAP
+          - generic [ref=e176]: // ARCHITECTURAL VIEW
+        - generic [ref=e178]:
+          - generic "API · score 0.38 · 83 files" [ref=e852]:
+            - generic [ref=e180]:
+              - generic [ref=e181]: API
+              - generic [ref=e182]: 45%
+            - generic [ref=e183]: auth · public · admin
+            - generic [ref=e184]: "0.38"
+          - generic "WEB · score 0.20 · 17 files" [ref=e889]:
+            - generic [ref=e186]:
+              - generic [ref=e187]: WEB
+              - generic [ref=e188]: 9%
+            - generic [ref=e189]: components
+            - generic [ref=e190]: "0.20"
+          - generic "WORKERS · score 0.00 · 0 files" [ref=e191]:
+            - generic [ref=e192]:
+              - generic [ref=e193]: WORKERS
+              - generic [ref=e194]: 0%
+            - generic [ref=e195]: —
+            - generic [ref=e196]: "0.00"
+          - generic "DATA · score 0.44 · 9 files" [ref=e854]:
+            - generic [ref=e198]:
+              - generic [ref=e199]: DATA
+              - generic [ref=e200]: 5%
+            - generic [ref=e201]: schemas
+            - generic [ref=e202]: "0.44"
+          - generic "INFRA · score 0.26 · 3 files" [ref=e855]:
+            - generic [ref=e204]:
+              - generic [ref=e205]: INFRA
+              - generic [ref=e206]: 2%
+            - generic [ref=e207]: env
+            - generic [ref=e208]: "0.26"
+          - generic "THIRD · score 0.43 · 74 files" [ref=e890]:
+            - generic [ref=e210]:
+              - generic [ref=e211]: THIRD
+              - generic [ref=e212]: 40%
+            - generic [ref=e213]: —
+            - generic [ref=e214]: "0.43"
+      - generic [ref=e215]:
+        - generic [ref=e216]:
+          - generic [ref=e217]:
+            - generic [ref=e218]: "[07]"
+            - text: THREAT SURFACE
+            - generic [ref=e219]: // 0 OPEN
+          - generic [ref=e220]:
+            - generic [ref=e221]: SCAN
+            - generic [ref=e222]: ·
+            - generic [ref=e223]: 14s ago
+        - generic [ref=e226]: // no open items
+    - generic [ref=e891]:
+      - generic [ref=e892]:
+        - generic "SYNTHESIZER VERDICT // dep_is7o_ack" [ref=e946]
+        - generic [ref=e894]: "[ ACKNOWLEDGED · rehearsal-ui ]"
+        - button "[ X ]" [ref=e895] [cursor=pointer]
+      - generic [ref=e896]:
+        - generic [ref=e897]: "[ INVESTIGATE ]"
+        - generic [ref=e898]: An unknown author with no commit history is attempting to make changes, though current activity shows minimal file modifications.
+        - generic [ref=e899]: CONCERNS · 6
+        - list [ref=e900]:
+          - listitem [ref=e901]: ▸ Author identity unverified - lookup for 'unknown' returned empty history with no established baseline
+          - listitem [ref=e902]: ▸ No known repositories or temporal patterns available for this author to assess legitimacy
+          - listitem [ref=e903]: ▸ Absence of commit history prevents comparison of current activity against baseline behavior
+          - listitem [ref=e904]: ▸ Unknown author status combined with code modifications represents identity verification gap
+          - listitem [ref=e905]: ▸ No package.json or security-relevant diff changes observed, but author verification remains unresolved
+          - listitem [ref=e906]: ▸ Empty file list in commit combined with unverified author creates ambiguity about actual scope of changes
+        - generic [ref=e907]: SUGGESTED ACTION
+        - generic [ref=e908]:
+          - generic [ref=e909]: recommended
+          - text: Verify author identity before accepting commit. Cross-reference against valid contributor list, require authentication proof, and establish baseline patterns for this contributor if legitimate. Block merge until identity confirmed.
+    - complementary "Live control centre" [ref=e227]:
+      - generic [ref=e228]:
+        - generic [ref=e229]: LIVE CONTROL CENTRE
+        - button "[ − ]" [expanded] [ref=e230] [cursor=pointer]
+      - generic [ref=e231]:
+        - generic [ref=e232]: GIT · CANARY
+        - generic [ref=e233]:
+          - button "⎆ PUSH CANARY" [ref=e234] [cursor=pointer]
+          - button "↩ REVERT CANARY" [ref=e235] [cursor=pointer]
+      - generic [ref=e236]:
+        - generic [ref=e237]: DISCORD
+        - button "◇ PING @here" [ref=e239] [cursor=pointer]
+      - generic [ref=e240]:
+        - generic [ref=e241]: AI · SMOKE
+        - button "◆ TEST LLM" [ref=e243] [cursor=pointer]
+      - generic [ref=e244]:
+        - generic [ref=e245]: WORKFLOW
+        - generic [ref=e246]:
+          - button "⚡ TRIGGER WATCHDOG" [ref=e247] [cursor=pointer]
+          - button "◈ TRACE VIEW" [disabled] [ref=e248] [cursor=pointer]
+          - button "◈ BOARD REHEARSAL" [ref=e249] [cursor=pointer]
+      - generic [ref=e250]:
+        - generic [ref=e251]: MAINT · DANGER
+        - generic [ref=e252]:
+          - button "↻ RESET INVESTIGATORS" [ref=e253] [cursor=pointer]
+          - button "⚠ KV RESET (full)" [ref=e254] [cursor=pointer]
+    - generic [ref=e858]:
+      - generic [ref=e859]:
+        - generic [ref=e860]: VISUAL TRACE REHEARSAL
+        - button "[ X ]" [ref=e861]
+      - generic [ref=e862]:
+        - generic [ref=e914]:
+          - generic [ref=e915]:
+            - generic [ref=e916]: ACKNOWLEDGE
+            - generic [ref=e917]: reh_mooiis7o_ack
+            - generic [ref=e918]: PASS
+          - generic [ref=e919]:
+            - generic [ref=e920]:
+              - generic [ref=e921]: 15:44:43
+              - generic [ref=e923]: POST /api/demo/trigger · start watchdog
+              - generic [ref=e924]: watchdog started
+            - generic [ref=e925]:
+              - generic [ref=e926]: 15:44:44
+              - generic [ref=e928]: polling pause_state
+              - generic [ref=e947]: found in KV
+            - generic [ref=e948]:
+              - generic [ref=e949]: 15:45:04
+              - generic [ref=e951]: hook paused · deploy:ack:reh_mooiis7o…
+            - generic [ref=e952]:
+              - generic [ref=e953]: 15:45:04
+              - generic [ref=e955]: polling verdicts (pre-resume)
+              - generic [ref=e956]: investigate
+            - generic [ref=e957]:
+              - generic [ref=e958]: 15:45:04
+              - generic [ref=e960]: POST /api/demo/resume · action=ack
+              - generic [ref=e961]: 200 OK
+            - generic [ref=e962]:
+              - generic [ref=e963]: 15:45:04
+              - generic [ref=e965]: polling verdicts (post-resume)
+              - generic [ref=e966]: investigate
+            - generic [ref=e967]:
+              - generic [ref=e968]: 15:45:08
+              - generic [ref=e970]: cleanup pause_state
+              - generic [ref=e971]: pause_state cleaned
+        - generic [ref=e972]:
+          - generic [ref=e973]:
+            - generic [ref=e974]: HOLD ROLLBACK
+            - generic [ref=e975]: reh_mooijebx_hold
+            - generic [ref=e976]: WAITING PAUSE
+          - generic [ref=e977]:
+            - generic [ref=e978]:
+              - generic [ref=e979]: 15:45:12
+              - generic [ref=e981]: POST /api/demo/trigger · start watchdog
+              - generic [ref=e982]: watchdog started
+            - generic [ref=e983]:
+              - generic [ref=e984]: 15:45:12
+              - generic [ref=e986]: polling pause_state
+        - generic [ref=e935]:
+          - generic [ref=e936]: PAGE @ONCALL
+          - generic [ref=e937]: pending-page
+          - generic [ref=e938]: IDLE
+      - generic [ref=e873]:
+        - button "■ ABORT" [ref=e939] [cursor=pointer]
+        - button "CLOSE" [ref=e875] [cursor=pointer]
+  - alert [ref=e255]

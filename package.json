@@ -1,0 +1,48 @@
+{
+  "name": "bridge",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "verify:tier1": "next build",
+    "verify:tier3": "vitest run",
+    "verify:tier4": "bash scripts/verify-tier4.sh",
+    "verify:canonical": "node scripts/verify-canonical.mjs",
+    "verify:integrations": "bash scripts/smoke-integrations.sh",
+    "smoke:prod-llm-discord": "node scripts/smoke-prod-llm-discord.mjs",
+    "verify": "npm run verify:tier1 && npm run verify:tier3 && npm run verify:tier4 && npm run test:e2e"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.74",
+    "@ai-sdk/openai-compatible": "^2.0.45",
+    "@octokit/rest": "^22.0.1",
+    "@workflow/ai": "^4.1.2",
+    "ai": "^6.0.174",
+    "dotenv": "^17.4.2",
+    "next": "16.2.4",
+    "octokit": "^5.0.5",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "redis": "^5.12.1",
+    "workflow": "^4.2.4",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.4",
+    "tailwindcss": "^4",
+    "@playwright/test": "^1.57.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5",
+    "vitest": "^4.1.5"
+  }
+}

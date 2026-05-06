@@ -1,0 +1,233 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]: BRIDGE//PRODUCTION WAR ROOM
+        - generic "Monitored GitHub repo (MONITORED_REPO / NEXT_PUBLIC_MONITORED_REPO)" [ref=e6]: REPO richard7ao/meridian-core-banking
+        - generic "GitHub URL — webhook push events from this repository" [ref=e7]:
+          - text: GH
+          - link "richard7ao/meridian-core-banking" [ref=e9] [cursor=pointer]:
+            - /url: https://github.com/richard7ao/meridian-core-banking
+        - generic [ref=e10]: BRANCH main
+        - generic [ref=e11]: REGION iad1 · sfo1 · fra1
+      - generic [ref=e12]:
+        - generic [ref=e13]: FOCUS — no active investigation —
+        - button "[ LIVE · connected ]" [ref=e14] [cursor=pointer]: "[ LIVE · connected ]"
+        - generic [ref=e16]: 2026-05-02 15:44:33 UTC
+    - generic [ref=e17]:
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - generic [ref=e24]: OPS://
+          - generic [ref=e25]: DEPLOY-MONITOR
+        - generic [ref=e26]:
+          - generic [ref=e27]: CHANNEL
+          - generic [ref=e28]: "#deploys · discord"
+        - generic [ref=e29]:
+          - generic [ref=e30]: SYNTH
+          - generic [ref=e31]: claude-sonnet-4 · v0.7.2
+        - generic [ref=e32]:
+          - generic [ref=e33]: AGENTS
+          - generic [ref=e34]: 5 STANDING
+      - generic [ref=e36]:
+        - generic [ref=e37]:
+          - img [ref=e38]
+          - generic [ref=e41]: "0.00"
+        - generic [ref=e42]:
+          - generic [ref=e43]:
+            - generic [ref=e44]: "["
+            - generic [ref=e45]: ALL CLEAR
+            - generic [ref=e46]: "]"
+          - generic [ref=e47]:
+            - generic [ref=e48]: monitoring
+            - generic [ref=e49]: ·
+            - generic [ref=e50]: 0 deploys analyzed
+            - generic [ref=e51]: ·
+            - generic [ref=e52]: 0h 0m since last incident
+      - generic [ref=e53]:
+        - generic [ref=e54]:
+          - generic [ref=e55]: RISK BIAS
+          - generic [ref=e56]: P50 0.11 · P95 0.42
+        - generic [ref=e57]:
+          - generic [ref=e58]: MTTA
+          - generic [ref=e59]: —
+        - generic [ref=e60]:
+          - generic [ref=e61]: SSE
+          - generic [ref=e62]: connected · 4ms
+        - generic [ref=e63]:
+          - generic [ref=e64]: BUDGET
+          - generic [ref=e65]: 100% remaining
+    - generic [ref=e66]:
+      - generic [ref=e67]:
+        - generic [ref=e68]: DEPLOY TIMELINE // LAST 30D
+        - generic [ref=e69]: N=0 · P50 0.11
+      - generic [ref=e71]:
+        - generic [ref=e72]: NOW
+        - generic [ref=e74]: 15:44Z
+        - generic [ref=e75]: +0.4d HORIZON
+    - generic [ref=e76]:
+      - generic [ref=e77]:
+        - generic [ref=e78]:
+          - generic [ref=e79]:
+            - generic [ref=e80]: "[04]"
+            - text: INVESTIGATOR AGENTS
+            - generic [ref=e81]: // PARALLEL FAN-OUT
+          - generic [ref=e82]:
+            - generic [ref=e83]: ACTIVE 0/5
+            - generic [ref=e84]: DONE 0/5
+        - generic [ref=e86]:
+          - generic [ref=e87]:
+            - generic [ref=e88]:
+              - generic [ref=e89]:
+                - generic [ref=e90]: "01"
+                - text: TRACE
+                - generic [ref=e91]: / INSPECTOR AGENT · OTLP
+              - generic [ref=e92]: "[ IDLE ]"
+            - generic [ref=e94]:
+              - generic [ref=e95]: STEPS 0
+              - generic [ref=e96]: TOK 0
+              - generic [ref=e97]: LAT —
+            - generic [ref=e99]:
+              - generic [ref=e100]: "--:--:--"
+              - generic [ref=e101]: standing by
+          - generic [ref=e102]:
+            - generic [ref=e103]:
+              - generic [ref=e104]:
+                - generic [ref=e105]: "02"
+                - text: RUNTIME
+                - generic [ref=e106]: / INSPECTOR AGENT · METRICS
+              - generic [ref=e107]: "[ IDLE ]"
+            - generic [ref=e109]:
+              - generic [ref=e110]: STEPS 0
+              - generic [ref=e111]: TOK 0
+              - generic [ref=e112]: LAT —
+            - generic [ref=e114]:
+              - generic [ref=e115]: "--:--:--"
+              - generic [ref=e116]: standing by
+          - generic [ref=e117]:
+            - generic [ref=e118]:
+              - generic [ref=e119]:
+                - generic [ref=e120]: "03"
+                - text: HISTORY
+                - generic [ref=e121]: / INSPECTOR AGENT · GIT
+              - generic [ref=e122]: "[ IDLE ]"
+            - generic [ref=e124]:
+              - generic [ref=e125]: STEPS 0
+              - generic [ref=e126]: TOK 0
+              - generic [ref=e127]: LAT —
+            - generic [ref=e129]:
+              - generic [ref=e130]: "--:--:--"
+              - generic [ref=e131]: standing by
+          - generic [ref=e132]:
+            - generic [ref=e133]:
+              - generic [ref=e134]:
+                - generic [ref=e135]: "04"
+                - text: DEPENDENCY
+                - generic [ref=e136]: / INSPECTOR AGENT · GRAPH
+              - generic [ref=e137]: "[ IDLE ]"
+            - generic [ref=e139]:
+              - generic [ref=e140]: STEPS 0
+              - generic [ref=e141]: TOK 0
+              - generic [ref=e142]: LAT —
+            - generic [ref=e144]:
+              - generic [ref=e145]: "--:--:--"
+              - generic [ref=e146]: standing by
+          - generic [ref=e147]:
+            - generic [ref=e148]:
+              - generic [ref=e149]:
+                - generic [ref=e150]: "05"
+                - text: DIFF
+                - generic [ref=e151]: / INSPECTOR AGENT · AST
+              - generic [ref=e152]: "[ IDLE ]"
+            - generic [ref=e154]:
+              - generic [ref=e155]: STEPS 0
+              - generic [ref=e156]: TOK 0
+              - generic [ref=e157]: LAT —
+            - generic [ref=e159]:
+              - generic [ref=e160]: "--:--:--"
+              - generic [ref=e161]: standing by
+      - generic [ref=e163]:
+        - generic [ref=e164]:
+          - generic [ref=e165]: "[05]"
+          - text: LIVE FEED
+          - generic [ref=e166]: "// #deploys"
+        - generic [ref=e169]: DISCORD · CONNECTED
+      - generic [ref=e172]:
+        - generic [ref=e174]:
+          - generic [ref=e175]: "[06]"
+          - text: SYSTEM-AREA HEATMAP
+          - generic [ref=e176]: // ARCHITECTURAL VIEW
+        - generic [ref=e178]:
+          - generic "API · score 0.00 · 0 files" [ref=e179]:
+            - generic [ref=e180]:
+              - generic [ref=e181]: API
+              - generic [ref=e182]: 0%
+            - generic [ref=e183]: —
+            - generic [ref=e184]: "0.00"
+          - generic "WEB · score 0.00 · 0 files" [ref=e185]:
+            - generic [ref=e186]:
+              - generic [ref=e187]: WEB
+              - generic [ref=e188]: 0%
+            - generic [ref=e189]: —
+            - generic [ref=e190]: "0.00"
+          - generic "WORKERS · score 0.00 · 0 files" [ref=e191]:
+            - generic [ref=e192]:
+              - generic [ref=e193]: WORKERS
+              - generic [ref=e194]: 0%
+            - generic [ref=e195]: —
+            - generic [ref=e196]: "0.00"
+          - generic "DATA · score 0.00 · 0 files" [ref=e197]:
+            - generic [ref=e198]:
+              - generic [ref=e199]: DATA
+              - generic [ref=e200]: 0%
+            - generic [ref=e201]: —
+            - generic [ref=e202]: "0.00"
+          - generic "INFRA · score 0.00 · 0 files" [ref=e203]:
+            - generic [ref=e204]:
+              - generic [ref=e205]: INFRA
+              - generic [ref=e206]: 0%
+            - generic [ref=e207]: —
+            - generic [ref=e208]: "0.00"
+          - generic "THIRD · score 0.00 · 0 files" [ref=e209]:
+            - generic [ref=e210]:
+              - generic [ref=e211]: THIRD
+              - generic [ref=e212]: 0%
+            - generic [ref=e213]: —
+            - generic [ref=e214]: "0.00"
+      - generic [ref=e215]:
+        - generic [ref=e216]:
+          - generic [ref=e217]:
+            - generic [ref=e218]: "[07]"
+            - text: THREAT SURFACE
+            - generic [ref=e219]: // 0 OPEN
+          - generic [ref=e220]:
+            - generic [ref=e221]: SCAN
+            - generic [ref=e222]: ·
+            - generic [ref=e223]: 14s ago
+        - generic [ref=e226]: // no open items
+    - complementary "Live control centre" [ref=e227]:
+      - generic [ref=e228]:
+        - generic [ref=e229]: LIVE CONTROL CENTRE
+        - button "[ − ]" [expanded] [ref=e230] [cursor=pointer]
+      - generic [ref=e231]:
+        - generic [ref=e232]: GIT · CANARY
+        - generic [ref=e233]:
+          - button "⎆ PUSH CANARY" [ref=e234] [cursor=pointer]
+          - button "↩ REVERT CANARY" [ref=e235] [cursor=pointer]
+      - generic [ref=e236]:
+        - generic [ref=e237]: DISCORD
+        - button "◇ PING @here" [ref=e239] [cursor=pointer]
+      - generic [ref=e240]:
+        - generic [ref=e241]: AI · SMOKE
+        - button "◆ TEST LLM" [ref=e243] [cursor=pointer]
+      - generic [ref=e244]:
+        - generic [ref=e245]: WORKFLOW
+        - generic [ref=e246]:
+          - button "⚡ TRIGGER WATCHDOG" [ref=e247] [cursor=pointer]
+          - button "◈ TRACE VIEW" [ref=e248] [cursor=pointer]
+          - button "◈ BOARD REHEARSAL" [ref=e249] [cursor=pointer]
+      - generic [ref=e250]:
+        - generic [ref=e251]: MAINT · DANGER
+        - generic [ref=e252]:
+          - button "↻ RESET INVESTIGATORS" [ref=e253] [cursor=pointer]
+          - button "⚠ KV RESET (full)" [ref=e254] [cursor=pointer]
+  - alert [ref=e255]

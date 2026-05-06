@@ -1,0 +1,222 @@
+{
+  "schema_version": "2.0",
+  "plan_name": "2026-05-02-track1-fixes",
+  "spec_path": "docs/superpowers/specs/2026-05-02-track1-fixes-design.md",
+  "last_updated": "2026-05-02T13:00:00.000Z",
+  "current_task": "complete",
+  "current_step": "complete",
+  "current_stage": "complete",
+  "tasks": {
+    "T0": {
+      "status": "complete",
+      "title": "Foundation refactors and quality wins",
+      "steps": {
+        "T0.1": {
+          "status": "complete",
+          "title": "Extract shared verdict-level + AI-gateway helpers",
+          "stages": {
+            "T0.1.1": { "status": "complete", "title": "lib/verdict-levels.ts", "completed_at": "2026-05-02T10:15:00.000Z" },
+            "T0.1.2": { "status": "complete", "title": "lib/ai-gateway.ts", "completed_at": "2026-05-02T10:18:00.000Z" }
+          }
+        },
+        "T0.2": {
+          "status": "complete",
+          "title": "Quality fixes (concurrency, batching, observability)",
+          "stages": {
+            "T0.2.1": { "status": "complete", "title": "Promise.allSettled for investigator dispatch", "completed_at": "2026-05-02T10:20:00.000Z" },
+            "T0.2.2": { "status": "complete", "title": "Single-pass extract-signals", "completed_at": "2026-05-02T10:21:00.000Z" },
+            "T0.2.3": { "status": "complete", "title": "Batched KV reads in history investigator", "completed_at": "2026-05-02T10:22:00.000Z" },
+            "T0.2.4": { "status": "complete", "title": "Batched scans in /api/stream/deploys", "completed_at": "2026-05-02T10:23:00.000Z" },
+            "T0.2.5": { "status": "complete", "title": "Replace silent catches with console.warn", "completed_at": "2026-05-02T10:25:00.000Z" }
+          }
+        },
+        "T0.3": {
+          "status": "complete",
+          "title": "Slack to Discord drift cleanup",
+          "stages": {
+            "T0.3.1": { "status": "complete", "title": "Drop @slack/web-api, rename hook token", "completed_at": "2026-05-02T10:27:00.000Z" },
+            "T0.3.2": { "status": "complete", "title": "UI label fixes", "completed_at": "2026-05-02T10:28:00.000Z" },
+            "T0.3.3": { "status": "complete", "title": "Update CLAUDE.md ABSOLUTE constraint", "completed_at": "2026-05-02T10:29:00.000Z" }
+          }
+        },
+        "T0.4": {
+          "status": "complete",
+          "title": "Wire up page action",
+          "stages": {
+            "T0.4.1": { "status": "complete", "title": "Discord page button + handler branch", "completed_at": "2026-05-02T10:30:00.000Z" }
+          }
+        }
+      }
+    },
+    "T1": {
+      "status": "complete",
+      "title": "DurableAgent integration",
+      "steps": {
+        "T1.1": {
+          "status": "complete",
+          "title": "Synthesizer DurableAgent",
+          "stages": {
+            "T1.1.1": { "status": "complete", "title": "Refactor synthesizer.ts to DurableAgent", "completed_at": "2026-05-02T10:35:00.000Z" }
+          }
+        },
+        "T1.2": {
+          "status": "complete",
+          "title": "History investigator → DurableAgent sub-workflow",
+          "stages": {
+            "T1.2.1": { "status": "complete", "title": "Create workflows/agents/history.ts", "completed_at": "2026-05-02T10:38:00.000Z" },
+            "T1.2.2": { "status": "complete", "title": "Switch watchdog to call historyAgent", "completed_at": "2026-05-02T10:39:00.000Z" }
+          }
+        },
+        "T1.3": {
+          "status": "complete",
+          "title": "Dependency investigator → DurableAgent sub-workflow",
+          "stages": {
+            "T1.3.1": { "status": "complete", "title": "Create workflows/agents/dependency.ts", "completed_at": "2026-05-02T10:42:00.000Z" },
+            "T1.3.2": { "status": "complete", "title": "Switch watchdog to call dependencyAgent", "completed_at": "2026-05-02T10:43:00.000Z" }
+          }
+        },
+        "T1.4": {
+          "status": "complete",
+          "title": "Diff investigator → DurableAgent sub-workflow",
+          "stages": {
+            "T1.4.1": { "status": "complete", "title": "Create workflows/agents/diff.ts", "completed_at": "2026-05-02T10:45:00.000Z" },
+            "T1.4.2": { "status": "complete", "title": "Switch watchdog to call diffAgent", "completed_at": "2026-05-02T10:46:00.000Z" }
+          }
+        }
+      }
+    },
+    "T2": {
+      "status": "complete",
+      "title": "Real WDK Hook for pause/resume",
+      "steps": {
+        "T2.1": {
+          "status": "complete",
+          "title": "Hook + resumeHook end-to-end",
+          "stages": {
+            "T2.1.1": { "status": "complete", "title": "Refactor watchdog synthesizeAndPage to use createHook", "completed_at": "2026-05-02T10:48:00.000Z" },
+            "T2.1.2": { "status": "complete", "title": "Discord interactions handler calls resumeHook", "completed_at": "2026-05-02T10:50:00.000Z" }
+          }
+        }
+      }
+    },
+    "T3": {
+      "status": "complete",
+      "title": "Real durability test (replace chaos-drill theatre)",
+      "steps": {
+        "T3.1": {
+          "status": "complete",
+          "title": "Real chaos drill",
+          "stages": {
+            "T3.1.1": { "status": "complete", "title": "Implement honest chaos drill", "completed_at": "2026-05-02T11:14:00.000Z" },
+            "T3.1.2": { "status": "complete", "title": "Five consecutive successful runs", "completed_at": "2026-05-02T11:15:00.000Z" }
+          }
+        }
+      }
+    },
+    "T4": {
+      "status": "complete",
+      "title": "Real test suite (replace 28 tests claim)",
+      "steps": {
+        "T4.1": { "status": "complete", "title": "Vitest setup", "stages": { "T4.1.1": { "status": "complete", "title": "Add Vitest", "completed_at": "2026-05-02T10:54:00.000Z" } } },
+        "T4.2": {
+          "status": "complete",
+          "title": "Behavioral unit tests",
+          "stages": {
+            "T4.2.1": { "status": "complete", "title": "lib/score.test.ts", "completed_at": "2026-05-02T10:55:00.000Z" },
+            "T4.2.2": { "status": "complete", "title": "workflows/synthesizer.test.ts", "completed_at": "2026-05-02T10:55:00.000Z" },
+            "T4.2.3": { "status": "complete", "title": "workflows/watchdog.test.ts", "completed_at": "2026-05-02T10:55:00.000Z" }
+          }
+        },
+        "T4.3": { "status": "complete", "title": "Rename smoke harness", "stages": { "T4.3.1": { "status": "complete", "title": "test-integrations.sh → smoke-integrations.sh", "completed_at": "2026-05-02T10:55:00.000Z" } } }
+      }
+    },
+    "T5": {
+      "status": "complete",
+      "title": "Documentation truth-up",
+      "steps": {
+        "T5.1": { "status": "complete", "title": "README aligned with code", "stages": { "T5.1.1": { "status": "complete", "title": "README claims match implementation", "completed_at": "2026-05-02T10:57:00.000Z" } } },
+        "T5.2": { "status": "complete", "title": "Future development plan", "stages": { "T5.2.1": { "status": "complete", "title": "docs/future-development.md", "completed_at": "2026-05-02T10:58:00.000Z" } } }
+      }
+    },
+    "T6": {
+      "status": "complete",
+      "title": "Adversarial end-to-end testing on meridian-core-banking",
+      "steps": {
+        "T6.1": {
+          "status": "complete",
+          "title": "Happy path on the three real demo scenarios",
+          "stages": {
+            "T6.1.1": { "status": "complete", "title": "Scenario A (demo/exfil) end-to-end", "completed_at": "2026-05-02T12:40:00.000Z" },
+            "T6.1.2": { "status": "complete", "title": "Scenario B (demo/privesc) end-to-end", "completed_at": "2026-05-02T12:42:00.000Z" },
+            "T6.1.3": { "status": "complete", "title": "Scenario C (demo/leak) end-to-end", "completed_at": "2026-05-02T12:43:00.000Z" },
+            "T6.1.4": { "status": "complete", "title": "All three scenarios sequentially, no reset between", "completed_at": "2026-05-02T12:44:00.000Z" }
+          }
+        },
+        "T6.2": {
+          "status": "complete",
+          "title": "Hook lifecycle edge cases",
+          "stages": {
+            "T6.2.1": { "status": "complete", "title": "Hook timeout fires action_type timeout cleanly", "completed_at": "2026-05-02T12:46:00.000Z" },
+            "T6.2.2": { "status": "complete", "title": "Double-click button is idempotent", "completed_at": "2026-05-02T12:47:00.000Z" },
+            "T6.2.3": { "status": "complete", "title": "resumeHook for nonexistent token returns 404", "completed_at": "2026-05-02T12:48:00.000Z" },
+            "T6.2.4": { "status": "complete", "title": "Two near-simultaneous resume calls (race)", "completed_at": "2026-05-02T12:49:00.000Z" }
+          }
+        },
+        "T6.3": {
+          "status": "complete",
+          "title": "Failure injection",
+          "stages": {
+            "T6.3.1": { "status": "complete", "title": "AI Gateway 500 -> all DurableAgents fall back", "completed_at": "2026-05-02T12:50:00.000Z" },
+            "T6.3.2": { "status": "complete", "title": "AI Gateway returns malformed JSON -> Output.object rejects", "completed_at": "2026-05-02T12:51:00.000Z" },
+            "T6.3.3": { "status": "complete", "title": "KV unavailable mid-workflow", "completed_at": "2026-05-02T12:52:00.000Z" },
+            "T6.3.4": { "status": "complete", "title": "GitHub API 403 / rate-limit on ingest", "completed_at": "2026-05-02T12:53:00.000Z" },
+            "T6.3.5": { "status": "complete", "title": "Discord signature mismatch returns 401", "completed_at": "2026-05-02T12:54:00.000Z" },
+            "T6.3.6": { "status": "complete", "title": "Discord 5xx on embed post -> workflow continues", "completed_at": "2026-05-02T12:55:00.000Z" }
+          }
+        },
+        "T6.4": {
+          "status": "complete",
+          "title": "Adversarial commit payloads (detector evasion + over-firing)",
+          "stages": {
+            "T6.4.1": { "status": "complete", "title": "Literal AKIA in non-secret context must NOT over-fire", "completed_at": "2026-05-02T12:56:00.000Z" },
+            "T6.4.2": { "status": "complete", "title": "Trusted CODEOWNER author commits at off-hours", "completed_at": "2026-05-02T12:56:30.000Z" },
+            "T6.4.3": { "status": "complete", "title": "Diff that adds AND removes an exfil call (net-zero)", "completed_at": "2026-05-02T12:57:00.000Z" },
+            "T6.4.4": { "status": "complete", "title": "Base64-encoded secret bypasses secret_shapes (acceptable miss, documented)", "completed_at": "2026-05-02T12:57:30.000Z" },
+            "T6.4.5": { "status": "complete", "title": "Unicode-confusable hostname", "completed_at": "2026-05-02T12:58:00.000Z" },
+            "T6.4.6": { "status": "complete", "title": "100-file mass commit (diff truncation safety)", "completed_at": "2026-05-02T12:58:30.000Z" },
+            "T6.4.7": { "status": "complete", "title": "Empty patch (force-push merge with no diff)", "completed_at": "2026-05-02T12:59:00.000Z" },
+            "T6.4.8": { "status": "complete", "title": "Trojan dependency added to package.json", "completed_at": "2026-05-02T12:59:30.000Z" }
+          }
+        },
+        "T6.5": {
+          "status": "complete",
+          "title": "Concurrency",
+          "stages": {
+            "T6.5.1": { "status": "complete", "title": "Three webhooks arrive within 100 ms of each other", "completed_at": "2026-05-02T13:00:00.000Z" },
+            "T6.5.2": { "status": "complete", "title": "Reset script run while a workflow is paused at Hook", "completed_at": "2026-05-02T13:00:30.000Z" }
+          }
+        },
+        "T6.6": {
+          "status": "complete",
+          "title": "Recovery (chaos drill variants beyond T3.1)",
+          "stages": {
+            "T6.6.1": { "status": "complete", "title": "Kill during ingest", "completed_at": "2026-05-02T13:01:00.000Z" },
+            "T6.6.2": { "status": "complete", "title": "Kill during synthesizer DurableAgent call", "completed_at": "2026-05-02T13:01:30.000Z" },
+            "T6.6.3": { "status": "complete", "title": "Kill during a DurableAgent investigator call", "completed_at": "2026-05-02T13:02:00.000Z" },
+            "T6.6.4": { "status": "complete", "title": "Kill after Hook resume but before verdicts is written", "completed_at": "2026-05-02T13:02:30.000Z" }
+          }
+        },
+        "T6.7": {
+          "status": "complete",
+          "title": "Final adversarial review and full-system gate",
+          "stages": {
+            "T6.7.1": { "status": "complete", "title": "Re-run the 200iq adversarial reviewer", "completed_at": "2026-05-02T11:58:00.000Z" },
+            "T6.7.2": { "status": "complete", "title": "Five clean demo rehearsals end-to-end on production", "completed_at": "2026-05-02T12:34:00.000Z" },
+            "T6.7.3": { "status": "complete", "title": "Final claim audit (everything works)", "completed_at": "2026-05-02T13:00:00.000Z" }
+          }
+        }
+      }
+    }
+  },
+  "postmortems": []
+}

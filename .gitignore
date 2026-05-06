@@ -1,0 +1,66 @@
+# === Next.js ===
+.next/
+out/
+.swc/
+next-env.d.ts
+*.tsbuildinfo
+
+# === Dependencies ===
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# === Build / test artifacts ===
+build/
+coverage/
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# === Env / secrets ===
+.env
+.env.local
+.env.*.local
+*.pem
+
+# === Logs ===
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# === Vercel ===
+.vercel/
+
+# === OS / editors ===
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# === Bridge runtime sentinels (spec T0.2.4 / T0.4 / T6 / T8 / T10) ===
+.deploy-url
+.demo-target-url
+.demo-target-path
+.demo-watermark
+.demo-staged-sha
+.demo-branches.json
+.demo-history-snapshot.json
+.demo-video-urls
+.last-reset-at
+.submission-confirmation
+
+# === Demo media (uploaded separately to YouTube/Loom — not committed) ===
+demo/*.mp4
+demo/*.mov
+demo/*.webm
+.env*.local
